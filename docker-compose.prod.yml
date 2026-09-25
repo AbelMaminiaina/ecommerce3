@@ -82,7 +82,7 @@ services:
       BACKEND_URL: http://backend:3001
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://fermeduvardier.com}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-fermeduvardier@gmail.com}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-savatry.milamina@gmail.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

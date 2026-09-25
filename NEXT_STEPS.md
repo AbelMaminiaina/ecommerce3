@@ -26,8 +26,8 @@ chaque session de travail.
      stock restauré automatiquement
    - Statut "Expédiée" → email envoyé au client
    - Statut "Livrée" → email envoyé au client
-   - Emails envoyés depuis `fermeduvardier@gmail.com` (plus l'adresse perso du dev)
-   - Connexion admin avec `fermeduvardier@gmail.com` (mot de passe : voir `.env.production`
+   - Emails envoyés depuis `savatry.milamina@gmail.com` (plus l'adresse perso du dev)
+   - Connexion admin avec `savatry.milamina@gmail.com` (mot de passe : voir `.env.production`
      sur le serveur, champ `ADMIN_PASSWORD`)
 
 ## Résumé de la dernière grosse session
@@ -36,7 +36,7 @@ chaque session de travail.
 - Migrations Prisma introduites (avant : `db push` manuel, oublié à chaque déploiement)
 - Nouvelles fonctionnalités commande : annulation avec motif + email client + restauration de
   stock, emails "expédiée"/"livrée", dialog moderne pour l'annulation (remplace `window.prompt`)
-- Email admin de connexion → `fermeduvardier@gmail.com` ; compte SMTP expéditeur → même adresse
+- Email admin de connexion → `savatry.milamina@gmail.com` ; compte SMTP expéditeur → même adresse
   (avant : adresse perso du développeur)
 - Fix d'un bug de cache : le stock affiché ne se mettait pas à jour immédiatement après une
   commande (cache produit non invalidé)

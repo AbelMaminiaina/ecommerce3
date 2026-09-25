@@ -81,7 +81,8 @@ const deliveryLabels: Record<string, string> = {
 const BRAND_NAME = process.env.PLATFORM_NAME || 'Plateforme B2B';
 
 // Email admin pour notifications internes
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
+// Adresse e-mail du site (lue à chaque envoi) : ADMIN_EMAIL, sinon l'adresse de contact du site
+const adminEmail = () => process.env.ADMIN_EMAIL || 'savatry.milamina@gmail.com';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-MG', {
@@ -291,7 +292,7 @@ function generateCustomerEmailHTML(order: OrderData): string {
     <div style="padding: 25px; background-color: #f8f8f8; text-align: center; border-top: 1px solid #e5e5e5;">
       <p style="margin: 0 0 10px 0; font-weight: bold; color: #1e3a5f;">Une question sur votre commande ?</p>
       <p style="margin: 0; color: #666; font-size: 14px;">
-        📧 ${ADMIN_EMAIL}
+        📧 ${adminEmail()}
       </p>
     </div>
 
@@ -456,7 +457,7 @@ function generateCancellationEmailHTML(order: CancellationEmailData): string {
     <div style="padding: 25px; background-color: #f8f8f8; text-align: center; border-top: 1px solid #e5e5e5;">
       <p style="margin: 0 0 10px 0; font-weight: bold; color: #1e3a5f;">Une question sur cette annulation ?</p>
       <p style="margin: 0; color: #666; font-size: 14px;">
-        📧 ${ADMIN_EMAIL}
+        📧 ${adminEmail()}
       </p>
     </div>
 
@@ -549,7 +550,7 @@ function generateShippedEmailHTML(order: StatusUpdateEmailData): string {
     <div style="padding: 25px; background-color: #f8f8f8; text-align: center; border-top: 1px solid #e5e5e5;">
       <p style="margin: 0 0 10px 0; font-weight: bold; color: #1e3a5f;">Une question sur votre commande ?</p>
       <p style="margin: 0; color: #666; font-size: 14px;">
-        📧 ${ADMIN_EMAIL}
+        📧 ${adminEmail()}
       </p>
     </div>
 
@@ -627,7 +628,7 @@ function generateDeliveredEmailHTML(order: StatusUpdateEmailData): string {
     <div style="padding: 25px; background-color: #f8f8f8; text-align: center; border-top: 1px solid #e5e5e5;">
       <p style="margin: 0 0 10px 0; font-weight: bold; color: #1e3a5f;">Une question sur votre commande ?</p>
       <p style="margin: 0; color: #666; font-size: 14px;">
-        📧 ${ADMIN_EMAIL}
+        📧 ${adminEmail()}
       </p>
     </div>
 
@@ -675,7 +676,7 @@ function generateCompanyRejectedHTML(data: CompanyRejectedEmailData): string {
       <h2 style="margin: 0; color: #dc2626;">Votre demande de compte n'a pas été acceptée</h2>
       <p style="margin: 15px 0; color: #666;">Bonjour ${data.companyName},</p>
       ${data.reason ? `<p style="margin: 15px 0; color: #333;">Motif : ${data.reason}</p>` : ''}
-      <p style="margin: 15px 0; color: #666;">Pour toute question, contactez-nous à ${ADMIN_EMAIL}.</p>
+      <p style="margin: 15px 0; color: #666;">Pour toute question, contactez-nous à ${adminEmail()}.</p>
     </div>
   </div>
 </body>
@@ -744,12 +745,12 @@ export async function sendAdminNotificationEmail(order: OrderData): Promise<bool
 
     await transporter.sendMail({
       from: `"${BRAND_NAME} - Système" <${process.env.SMTP_USER}>`,
-      to: ADMIN_EMAIL,
+      to: adminEmail(),
       subject: `🔔 Nouvelle commande ${order.orderNumber} - ${formatPrice(order.total)}`,
       html: adminHTML,
     });
 
-    console.log(`✉️ Email admin envoyé à ${ADMIN_EMAIL} pour commande ${order.orderNumber}`);
+    console.log(`✉️ Email admin envoyé à ${adminEmail()} pour commande ${order.orderNumber}`);
     return true;
   } catch (error) {
     console.error('Error sending admin email:', error);

@@ -43,11 +43,14 @@ declare global {
   }
 }
 
-// Options reprises telles quelles de public/electro/js/main.js
+// Options de main.js, sauf le changement de slide : fondu (animateOut, animate.css) au lieu du glissement, pour que
+// l'animation d'entrée de chaque slide (image depuis la gauche, texte depuis la droite : electro-extra.css) se joue sur
+// place et soit bien visible.
 export const HEADER_CAROUSEL_OPTIONS = {
   autoplay: true,
   autoplayTimeout: 6000,
-  smartSpeed: 1500,
+  smartSpeed: 1000,
+  animateOut: 'fadeOut',
   dots: false,
   loop: true,
   margin: 25,

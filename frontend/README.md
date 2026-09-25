@@ -201,7 +201,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
-CONTACT_EMAIL=fermeduvardier@gmail.com
+CONTACT_EMAIL=savatry.milamina@gmail.com
 
 # Google Maps
 NEXT_PUBLIC_GOOGLE_MAPS_KEY=your-google-maps-api-key
@@ -340,7 +340,7 @@ Le site peut être déployé sur :
 ## Support
 
 Pour toute question ou problème :
-- Email : fermeduvardier@gmail.com
+- Email : savatry.milamina@gmail.com
 - Téléphone : 01 23 45 67 89
 
 ## Licence

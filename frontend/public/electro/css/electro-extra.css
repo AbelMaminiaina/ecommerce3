@@ -153,3 +153,33 @@ body {
 .shop .featured-product .rating-stars {
     font-size: .9rem;
 }
+
+/* Animation d'entrée du carrousel d'accueil, rejouée à CHAQUE slide : l'image arrive de la gauche, puis le titre, le
+   texte et le bouton arrivent de la droite l'un après l'autre. WOW ne joue une animation qu'une fois (au chargement) ;
+   ici l'animation démarre dès que Owl marque le slide « active » (keyframes fadeInLeft / fadeInRight d'animate.css). */
+.header-carousel .owl-item.active .carousel-img {
+    animation: fadeInLeft 1s ease both;
+    animation-delay: .1s;
+}
+.header-carousel .owl-item.active .carousel-content > h4 {
+    animation: fadeInRight 1s ease both;
+    animation-delay: .1s;
+}
+.header-carousel .owl-item.active .carousel-content > h1 {
+    animation: fadeInRight 1s ease both;
+    animation-delay: .3s;
+}
+.header-carousel .owl-item.active .carousel-content > p {
+    animation: fadeInRight 1s ease both;
+    animation-delay: .5s;
+}
+.header-carousel .owl-item.active .carousel-content > a {
+    animation: fadeInRight 1s ease both;
+    animation-delay: .7s;
+}
+@media (prefers-reduced-motion: reduce) {
+    .header-carousel .owl-item.active .carousel-img,
+    .header-carousel .owl-item.active .carousel-content > * {
+        animation: none;
+    }
+}
