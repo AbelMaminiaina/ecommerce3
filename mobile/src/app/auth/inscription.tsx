@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { registerCustomerSchema, type RegisterCustomerInput } from '@tsena/shared';
 import { Body, Button, ErrorText, TextField, errorMessage, styles as ui } from '../../components/ui';
+import { Brand } from '../../components/Brand';
 import { useAuth } from '../../features/auth/store';
 
 type Field = keyof RegisterCustomerInput;
@@ -36,6 +37,9 @@ export default function Register() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={ui.screen} keyboardShouldPersistTaps="handled">
+        <View style={{ alignItems: 'center', marginVertical: 12 }}>
+          <Brand size="lg" />
+        </View>
         <TextField label="Prénom" value={form.firstName} onChangeText={set('firstName')} error={errors.firstName} autoComplete="given-name" />
         <TextField label="Nom" value={form.lastName} onChangeText={set('lastName')} error={errors.lastName} autoComplete="family-name" />
         <TextField

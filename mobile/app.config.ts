@@ -6,7 +6,8 @@ import type { ExpoConfig } from 'expo/config';
 const cleartextApi = /^http:\/\//i.test(process.env.EXPO_PUBLIC_API_URL ?? '');
 
 const config: ExpoConfig = {
-  name: 'Tsena Pro',
+  // Nom affiché sous l'icône du téléphone (le slug « tsena-pro » reste : il identifie le projet EAS)
+  name: 'Tsena',
   slug: 'tsena-pro',
   scheme: 'tsenapro',
   version: '1.0.0',

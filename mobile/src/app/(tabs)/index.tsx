@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogApi, formatPrice, FREE_SHIPPING_THRESHOLD, type Product } from '@tsena/shared';
+import { Brand } from '../../components/Brand';
 import { HeaderActions } from '../../components/HeaderActions';
 import { ProductCard } from '../../components/ProductCard';
 import { ProductImage } from '../../components/ProductImage';
@@ -97,9 +98,10 @@ export default function Home() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
       <View style={styles.header}>
-        <Greeting />
+        <Brand />
         <HeaderActions />
       </View>
+      <Greeting />
 
       <View style={styles.tabs}>
         {(['home', 'categories'] as const).map((t) => (
@@ -167,9 +169,9 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  greeting: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: fonts.heading, color: colors.primaryDark, fontSize: 15 },
+  greeting: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 8 },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: fonts.heading, color: colors.primaryDark, fontSize: 14 },
   hello: { fontFamily: fonts.heading, fontSize: 16, color: colors.text },
   helloSub: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginTop: 2 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, marginHorizontal: 20 },

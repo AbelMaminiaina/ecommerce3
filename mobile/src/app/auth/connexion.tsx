@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { loginSchema } from '@tsena/shared';
 import { Body, Button, ErrorText, TextField, errorMessage, styles as ui } from '../../components/ui';
+import { Brand } from '../../components/Brand';
 import { useAuth } from '../../features/auth/store';
 import { colors } from '../../theme';
 
@@ -34,6 +35,9 @@ export default function Login() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={ui.screen} keyboardShouldPersistTaps="handled">
+        <View style={{ alignItems: 'center', marginVertical: 12 }}>
+          <Brand size="lg" />
+        </View>
         <TextField
           label="E-mail"
           value={email}
