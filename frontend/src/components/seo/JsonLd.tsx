@@ -10,7 +10,7 @@ export function OrganizationJsonLd() {
     name: 'Tsena Pro',
     alternateName: 'TsenaPro',
     url: SITE_URL,
-    logo: `${SITE_URL}/icon.svg`,
+    logo: `${SITE_URL}/icon-512.png`,
     description:
       'Tsena Pro est une plateforme de vente en gros pour professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money, livraison à Antananarivo.',
     address: {
@@ -48,7 +48,7 @@ export function LocalBusinessJsonLd() {
     '@type': 'LocalBusiness',
     '@id': `${SITE_URL}/#localbusiness`,
     name: 'Tsena Pro',
-    image: `${SITE_URL}/icon.svg`,
+    image: `${SITE_URL}/icon-512.png`,
     description:
       'Plateforme de vente en gros pour professionnels à Madagascar : catalogue multi-catégories, tarifs dégressifs par quantité, paiement par Mobile Money.',
     url: SITE_URL,

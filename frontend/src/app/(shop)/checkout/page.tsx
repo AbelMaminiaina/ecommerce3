@@ -176,8 +176,8 @@ export default function CheckoutPage() {
 
   if (status === 'loading') {
     return (
-      <div className="d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+      <div className="sw-page-loader">
+        <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Chargement…</span>
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
       <>
         <PageHeader title="Commande" crumbs={crumbs} />
         <section className="sw-section">
-          <div className="container" style={{ maxWidth: 640 }}>
+          <div className="container sw-container-narrow">
             <div className="sw-empty">
               <i className="bi bi-hourglass-split"></i>
               <h2>Compte en attente de validation</h2>
@@ -325,7 +325,7 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                           {/* Champ piège pour les robots : caché aux humains */}
-                          <div style={{ position: 'absolute', left: '-9999px' }} aria-hidden="true">
+                          <div className="sw-honeypot" aria-hidden="true">
                             <label htmlFor="guest-website">Ne pas remplir</label>
                             <input
                               id="guest-website"
@@ -419,7 +419,7 @@ export default function CheckoutPage() {
 
                           {steps.some((s) => s.id === 'livraison') && (
                             <>
-                              <label className="d-block fw-medium text-dark mt-4 mb-2" style={{ fontSize: 14 }}>Délai de livraison</label>
+                              <label className="d-block fw-medium text-dark mt-4 mb-2 sw-field-label">Délai de livraison</label>
                               <div className="method-tabs mb-0">
                                 {(['standard', 'express'] as const).map((method) => {
                                   const cost = shippingFor(method);

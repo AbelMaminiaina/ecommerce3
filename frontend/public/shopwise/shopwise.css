@@ -6,9 +6,10 @@
    ========================================================================== */
 
 :root {
-  --sw-font: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --sw-heading-font: "Quicksand", sans-serif;
-  --sw-nav-font: "Inter", sans-serif;
+  /* Polices hébergées par le site (next/font, lib/fonts.ts) : variables posées sur <html> */
+  --sw-font: var(--font-roboto), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --sw-heading-font: var(--font-quicksand), sans-serif;
+  --sw-nav-font: var(--font-inter), sans-serif;
 
   --sw-bg: #ffffff;
   --sw-text: #5a6577;

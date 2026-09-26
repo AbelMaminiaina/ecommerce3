@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
                 Email
               </label>
               <div className="relative">
-                <i className="bi bi-envelope absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-[20px] leading-none" aria-hidden="true" />
+                <i className="bi bi-envelope absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-warm-400 text-[20px] leading-none" aria-hidden="true" />
                 <Input
                   type="email"
                   value={email}
@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
                 Mot de passe
               </label>
               <div className="relative">
-                <i className="bi bi-lock absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-[20px] leading-none" aria-hidden="true" />
+                <i className="bi bi-lock absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-warm-400 text-[20px] leading-none" aria-hidden="true" />
                 <Input
                   type="password"
                   value={password}

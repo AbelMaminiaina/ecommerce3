@@ -525,7 +525,7 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                                 <div key={row.stars} className="dist-row">
                                   <span className="dist-label">{row.stars} <i className="bi bi-star-fill"></i></span>
                                   <div className="dist-track">
-                                    <div className="dist-fill" style={{ width: `${row.percent}%` }}></div>
+                                    <div className="dist-fill" style={{ '--pct': `${row.percent}%` } as React.CSSProperties}></div>
                                   </div>
                                   <span className="dist-count">{row.count}</span>
                                 </div>

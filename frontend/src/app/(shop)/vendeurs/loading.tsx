@@ -10,7 +10,7 @@ export default function Loading() {
           <div className="row g-3">
             {Array.from({ length: 6 }, (_, i) => (
               <div key={i} className="col-md-6 col-xl-4">
-                <span className="sw-skel" style={{ height: 200, borderRadius: 8 }} />
+                <span className="sw-skel sw-skel-card-block" />
               </div>
             ))}
           </div>

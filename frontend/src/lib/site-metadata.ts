@@ -1,21 +1,28 @@
 import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/site';
 
+// Icônes de l'onglet (partagées par la boutique et l'espace de gestion) : SVG pour les navigateurs récents,
+// PNG 32 px pour Safari et les anciens, 180 px plein cadre pour l'écran d'accueil iPhone.
+export const siteIcons: Metadata['icons'] = {
+  icon: [
+    { url: '/icon.svg', type: 'image/svg+xml' },
+    { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+  ],
+  shortcut: '/favicon-32x32.png',
+  apple: '/apple-touch-icon.png',
+};
+
 // Métadonnées SEO de la boutique (layout racine (shop)) ; l'espace de gestion a les siennes, non indexées.
 export const siteMetadata: Metadata = {
   title: {
     default: 'Tsena Pro - Plateforme de vente en gros pour professionnels à Madagascar',
     template: '%s | Tsena Pro',
   },
-  icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
-  },
+  icons: siteIcons,
   description:
     'Tsena Pro est une plateforme B2B de vente en gros à Madagascar : tarifs dégressifs par quantité, paiement par Mobile Money, livraison à Antananarivo. Ouvert aux particuliers.',
   keywords: [
-    'all',
+    'tsena pro',
     'grossiste madagascar',
     'vente en gros madagascar',
     'plateforme b2b madagascar',

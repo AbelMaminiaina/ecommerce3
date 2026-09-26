@@ -10,9 +10,10 @@
 # Polices & couleurs
 --------------------------------------------------------------*/
 .sw-admin {
-  --default-font: "Roboto", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --heading-font: "Quicksand", sans-serif;
-  --nav-font: "Inter", sans-serif;
+  /* Polices hébergées par le site (next/font, lib/fonts.ts) */
+  --default-font: var(--font-roboto), system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --heading-font: var(--font-quicksand), sans-serif;
+  --nav-font: var(--font-inter), sans-serif;
 
   --background-color: #f4f7f6;
   --default-color: #5a6577;
@@ -378,6 +379,7 @@ a.kpi-card:hover { border-color: color-mix(in srgb, var(--tone), transparent 50%
 .sales-chart .col-bar .fill {
   position: relative;
   width: 100%;
+  height: var(--h, 0%); /* hauteur posée par le composant (part du jour le plus haut) */
   max-width: 40px;
   min-height: 2px;
   border-radius: 6px 6px 0 0;

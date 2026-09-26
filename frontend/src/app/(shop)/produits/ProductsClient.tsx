@@ -354,7 +354,7 @@ function ProductsContent({ initialProducts }: ProductsClientProps) {
             </aside>
 
             {/* Résultats */}
-            <div className="col-lg-9" ref={resultsRef} style={{ scrollMarginTop: 90 }}>
+            <div className="col-lg-9 sw-anchor" ref={resultsRef}>
               <div className="shop-toolbar">
                 <p className="mb-0" role="status">
                   <strong>{filteredProducts.length}</strong> produit{filteredProducts.length > 1 ? 's' : ''}

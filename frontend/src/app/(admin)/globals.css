@@ -198,12 +198,3 @@
     -webkit-line-clamp: 3;
   }
 }
-
-/* Font faces */
-@font-face {
-  font-family: 'Playfair Display';
-  font-style: normal;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url('/fonts/PlayfairDisplay-VariableFont.woff2') format('woff2');
-}

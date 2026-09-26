@@ -1,4 +1,5 @@
 import { siteMetadata } from '@/lib/site-metadata';
+import { fontVariables } from '@/lib/fonts';
 import { SessionProvider } from '@/components/providers/SessionProvider';
 import { ToastProvider } from '@/components/shop/Toast';
 import { ShopwiseHeader } from '@/components/shopwise/Header';
@@ -14,14 +15,8 @@ export const metadata = siteMetadata;
 // la navigation entre les deux groupes recharge la page, ce qui évite tout mélange de CSS.
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" className={fontVariables} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600&family=Quicksand:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <link rel="stylesheet" href="/shopwise/bootstrap-icons/bootstrap-icons.min.css" />
         <link rel="stylesheet" href="/electro/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/electro/css/style.css" />

@@ -66,8 +66,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ['var(--font-roboto)', 'var(--font-open-sans)', 'system-ui', 'sans-serif'],
-        sans: ['var(--font-open-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-quicksand)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-roboto)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         '4xl': '2rem',

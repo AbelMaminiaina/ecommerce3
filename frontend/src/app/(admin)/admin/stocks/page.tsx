@@ -381,7 +381,7 @@ export default function AdminStocksPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1 sm:max-w-xs">
-          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-[20px] leading-none" aria-hidden="true" />
+          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-warm-400 text-[20px] leading-none" aria-hidden="true" />
           <Input
             placeholder="Rechercher..."
             value={search}

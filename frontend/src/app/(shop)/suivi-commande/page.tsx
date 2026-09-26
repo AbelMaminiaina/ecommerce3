@@ -159,7 +159,7 @@ export default function SuiviCommandePage() {
                     <div><strong>Paiement Mobile Money</strong><span>Réglez une commande en attente directement depuis votre compte.</span></div>
                   </li>
                 </ul>
-                <Link href="/connexion?callbackUrl=/compte%23orders" className="btn-social mt-4 text-decoration-none" style={{ maxWidth: 220 }}>
+                <Link href="/connexion?callbackUrl=/compte%23orders" className="btn-social mt-4 text-decoration-none sw-max-220">
                   <i className="bi bi-box-arrow-in-right"></i> Se connecter
                 </Link>
               </div>

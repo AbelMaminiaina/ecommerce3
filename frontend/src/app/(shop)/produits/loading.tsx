@@ -9,15 +9,15 @@ export default function Loading() {
         <div className="container">
           <div className="row g-4">
             <aside className="col-lg-3 d-none d-lg-block" aria-hidden="true">
-              {[160, 220, 110].map((height, i) => (
-                <div key={i} className="shop-widget">
-                  <span className="sw-skel sw-skel-line" style={{ width: '50%' }} />
-                  <span className="sw-skel" style={{ height }} />
+              {['sw-skel-h160', 'sw-skel-h220', 'sw-skel-h110'].map((height) => (
+                <div key={height} className="shop-widget">
+                  <span className="sw-skel sw-skel-line sw-skel-w50" />
+                  <span className={`sw-skel ${height}`} />
                 </div>
               ))}
             </aside>
             <div className="col-lg-9">
-              <span className="sw-skel mb-3" style={{ height: 54 }} />
+              <span className="sw-skel sw-skel-toolbar mb-3" />
               <ProductGridSkeleton count={9} columns={3} />
             </div>
           </div>

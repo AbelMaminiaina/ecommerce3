@@ -1403,3 +1403,52 @@
 .sw-skel-card .sw-skel-media { aspect-ratio: 1 / 1; border-radius: 0; }
 .sw-skel-card .sw-skel-body { padding: 16px; }
 .sw-skel-block { height: 180px; border-radius: 8px; }
+
+/* ---------- Classes remplaçant les anciens styles en ligne (style={{…}}) ---------- */
+.sw-anchor { scroll-margin-top: 90px; }                 /* cible d'ancre sous l'en-tête fixe */
+.sw-page-loader { min-height: 60vh; display: flex; align-items: center; justify-content: center; }
+.sw-page-loader .spinner-border { width: 3rem; height: 3rem; }
+.sw-container-narrow { max-width: 640px; }
+.sw-honeypot { position: absolute; left: -9999px; }     /* champ piège anti-robots, invisible */
+.sw-field-label { font-size: 14px; }
+.sw-max-220 { max-width: 220px; }
+.sw-max-280 { max-width: 280px; }
+.sw-toasts { z-index: 1100; }
+.sw-mobile-toggle .bi-list { font-size: 26px; }
+.sw-mega-cat.wide { grid-column: span 2; }
+.sw-mega-cat.wide ul { columns: 2; }
+.sw-promo-placeholder { font-size: 48px; }
+
+/* Formulaire d'avis : étoiles sélectionnées */
+.review-star { font-size: 22px; color: #ced4da; }
+.review-star.active { color: var(--bs-primary); }
+
+/* Valeurs calculées à partir des données : le composant ne pose qu'une variable CSS */
+.rating-stars .rating-fill { width: var(--fill, 0%); }  /* remplissage d'une étoile (note 4,5 -> 50 %) */
+.sw-pd .dist-fill { width: var(--pct, 0%); }            /* répartition des notes */
+
+/* Étoiles animées : décalage selon la position */
+.rating-stars.star-pop:nth-child(2) { animation-delay: 70ms; }
+.rating-stars.star-pop:nth-child(3) { animation-delay: 140ms; }
+.rating-stars.star-pop:nth-child(4) { animation-delay: 210ms; }
+.rating-stars.star-pop:nth-child(5) { animation-delay: 280ms; }
+
+/* Jauge de robustesse du mot de passe (niveaux 0 à 4) */
+.auth .strength-bar span[data-level="1"] { width: 25%; background: #dc3545; }
+.auth .strength-bar span[data-level="2"] { width: 50%; background: #f59e0b; }
+.auth .strength-bar span[data-level="3"] { width: 75%; background: #22c55e; }
+.auth .strength-bar span[data-level="4"] { width: 100%; background: #0d9488; }
+
+/* Squelettes de chargement : largeurs et hauteurs */
+.sw-skel-w30 { width: 30%; } .sw-skel-w35 { width: 35%; } .sw-skel-w40 { width: 40%; } .sw-skel-w45 { width: 45%; }
+.sw-skel-w50 { width: 50%; } .sw-skel-w60 { width: 60%; } .sw-skel-w70 { width: 70%; } .sw-skel-w75 { width: 75%; }
+.sw-skel-w80 { width: 80%; } .sw-skel-w85 { width: 85%; } .sw-skel-w90 { width: 90%; } .sw-skel-w95 { width: 95%; }
+.sw-skel-h110 { height: 110px; } .sw-skel-h160 { height: 160px; } .sw-skel-h220 { height: 220px; }
+.sw-skel-price-line { width: 35%; height: 18px; margin: 16px 0 0; }
+.sw-skel-toolbar { height: 54px; }
+.sw-skel-heading { height: 32px; }
+.sw-skel-price { height: 36px; }
+.sw-skel-btn { height: 48px; }
+.sw-skel-square { aspect-ratio: 1 / 1; border-radius: 8px; }
+.sw-skel-card-block { height: 200px; border-radius: 8px; }
+.sw-skel-profile { height: 170px; border-radius: 8px; }

@@ -195,7 +195,7 @@ export default function AdminDashboard() {
             <div className="sales-chart" role="img" aria-label="Histogramme des ventes quotidiennes">
               {salesDays.map((day) => (
                 <div key={day.date.toISOString()} className="col-bar">
-                  <div className="fill" style={{ height: `${(day.total / maxDay) * 85}%` }}>
+                  <div className="fill" style={{ '--h': `${(day.total / maxDay) * 85}%` } as React.CSSProperties}>
                     <span className="tip">{formatPrice(day.total)}</span>
                   </div>
                   <small>{day.date.toLocaleDateString('fr-FR', { weekday: 'short' })}</small>

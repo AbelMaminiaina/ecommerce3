@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     keywords: [
       product.name,
       product.category,
-      'all',
+      'tsena pro',
       'madagascar',
       'vente en gros',
       'livraison antananarivo',

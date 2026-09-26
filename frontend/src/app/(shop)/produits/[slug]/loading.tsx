@@ -9,17 +9,17 @@ export default function Loading() {
         <div className="container">
           <div className="row g-4 mb-5">
             <div className="col-lg-6">
-              <span className="sw-skel" style={{ aspectRatio: '1 / 1', borderRadius: 8 }} />
+              <span className="sw-skel sw-skel-square" />
             </div>
             <div className="col-lg-6">
-              <span className="sw-skel sw-skel-line" style={{ width: '30%' }} />
-              <span className="sw-skel mb-3" style={{ height: 32, width: '80%' }} />
-              <span className="sw-skel sw-skel-line" style={{ width: '40%' }} />
-              <span className="sw-skel mb-4" style={{ height: 36, width: '35%' }} />
-              <span className="sw-skel sw-skel-line" style={{ width: '95%' }} />
-              <span className="sw-skel sw-skel-line" style={{ width: '88%' }} />
-              <span className="sw-skel sw-skel-line mb-4" style={{ width: '70%' }} />
-              <span className="sw-skel" style={{ height: 48, width: '60%' }} />
+              <span className="sw-skel sw-skel-line sw-skel-w30" />
+              <span className="sw-skel sw-skel-heading sw-skel-w80 mb-3" />
+              <span className="sw-skel sw-skel-line sw-skel-w40" />
+              <span className="sw-skel sw-skel-price sw-skel-w35 mb-4" />
+              <span className="sw-skel sw-skel-line sw-skel-w95" />
+              <span className="sw-skel sw-skel-line sw-skel-w90" />
+              <span className="sw-skel sw-skel-line sw-skel-w70 mb-4" />
+              <span className="sw-skel sw-skel-btn sw-skel-w60" />
             </div>
           </div>
           <ProductGridSkeleton count={4} />

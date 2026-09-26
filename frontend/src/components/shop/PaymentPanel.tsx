@@ -236,8 +236,7 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
                       <input
                         id="instant-phone"
                         type="tel"
-                        className={`form-control py-3 flex-grow-1${instantPhone && !instantPhoneValid ? ' is-invalid' : ''}`}
-                        style={{ maxWidth: 280 }}
+                        className={`form-control py-3 flex-grow-1 sw-max-280${instantPhone && !instantPhoneValid ? ' is-invalid' : ''}`}
                         value={instantPhone}
                         onChange={(e) => setInstantPhone(e.target.value)}
                         placeholder={instant.phonePlaceholder}

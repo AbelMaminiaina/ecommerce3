@@ -43,7 +43,7 @@ export function PromoCards({ categories }: { categories: HomeCategory[] }) {
                     {category.image ? (
                       <Image src={category.image} alt={category.name} width={300} height={300} sizes="(max-width: 768px) 50vw, 20vw" />
                     ) : (
-                      <i className="bi bi-grid-3x3-gap text-muted" style={{ fontSize: 48 }}></i>
+                      <i className="bi bi-grid-3x3-gap text-muted sw-promo-placeholder"></i>
                     )}
                   </div>
                   <div className="sw-category-body">

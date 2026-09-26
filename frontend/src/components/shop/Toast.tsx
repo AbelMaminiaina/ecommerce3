@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div className="toast-container position-fixed bottom-0 end-0 p-3" style={{ zIndex: 1100 }} aria-live="polite">
+      <div className="toast-container position-fixed bottom-0 end-0 p-3 sw-toasts" aria-live="polite">
         {toasts.map((toast) => (
           <ToastView key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
         ))}

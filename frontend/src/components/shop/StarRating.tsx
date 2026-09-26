@@ -28,11 +28,10 @@ export function StarRating({ value, count = 0, showCount = true, animated = fals
             <span
               key={i}
               className={`rating-stars${animated ? ' star-pop' : ''}`}
-              style={animated ? { animationDelay: `${i * 70}ms` } : undefined}
             >
               <i className="bi bi-star-fill" aria-hidden="true"></i>
               {fill > 0 && (
-                <span className="rating-fill" style={{ width: `${fill * 100}%` }}>
+                <span className="rating-fill" style={{ '--fill': `${fill * 100}%` } as React.CSSProperties}>
                   <i className="bi bi-star-fill" aria-hidden="true"></i>
                 </span>
               )}

@@ -18,10 +18,10 @@ export function ProductCardSkeleton() {
     <div className="sw-skel-card" aria-hidden="true">
       <span className="sw-skel sw-skel-media" />
       <div className="sw-skel-body">
-        <span className="sw-skel sw-skel-line" style={{ width: '45%' }} />
-        <span className="sw-skel sw-skel-line" style={{ width: '85%' }} />
-        <span className="sw-skel sw-skel-line" style={{ width: '60%' }} />
-        <span className="sw-skel sw-skel-line" style={{ width: '35%', height: 18, marginTop: 16, marginBottom: 0 }} />
+        <span className="sw-skel sw-skel-line sw-skel-w45" />
+        <span className="sw-skel sw-skel-line sw-skel-w85" />
+        <span className="sw-skel sw-skel-line sw-skel-w60" />
+        <span className="sw-skel sw-skel-price-line" />
       </div>
     </div>
   );
@@ -50,9 +50,9 @@ export function PageSkeleton() {
           <div className="row g-4">
             <div className="col-lg-8">
               <span className="sw-skel sw-skel-block mb-4" />
-              <span className="sw-skel sw-skel-line" style={{ width: '90%' }} />
-              <span className="sw-skel sw-skel-line" style={{ width: '75%' }} />
-              <span className="sw-skel sw-skel-line" style={{ width: '82%' }} />
+              <span className="sw-skel sw-skel-line sw-skel-w90" />
+              <span className="sw-skel sw-skel-line sw-skel-w75" />
+              <span className="sw-skel sw-skel-line sw-skel-w80" />
             </div>
             <div className="col-lg-4">
               <span className="sw-skel sw-skel-block" />

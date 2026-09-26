@@ -7,7 +7,7 @@ export default function Loading() {
       <PageTitleSkeleton />
       <section className="sw-section" aria-busy="true" aria-label="Chargement du vendeur">
         <div className="container">
-          <span className="sw-skel mb-5" style={{ height: 170, borderRadius: 8 }} />
+          <span className="sw-skel sw-skel-profile mb-5" />
           <ProductGridSkeleton count={4} />
         </div>
       </section>

@@ -219,7 +219,7 @@ export default function AdminOrdersPage() {
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
-          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-[20px] leading-none" aria-hidden="true" />
+          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-warm-400 text-[20px] leading-none" aria-hidden="true" />
           <Input
             type="text"
             placeholder="Rechercher par n°, nom ou email..."

@@ -275,7 +275,7 @@ export function ShopwiseHeader() {
               aria-expanded={navOpen}
               onClick={() => setNavOpen(true)}
             >
-              <i className="bi bi-list" style={{ fontSize: 26 }}></i>
+              <i className="bi bi-list"></i>
             </button>
           </div>
         </div>
@@ -323,9 +323,9 @@ export function ShopwiseHeader() {
                         <li><Link href="/vendeurs">Nos vendeurs</Link></li>
                       </ul>
                     </div>
-                    <div className="sw-mega-cat" style={{ gridColumn: 'span 2' }}>
+                    <div className="sw-mega-cat wide">
                       <h4>Rayons</h4>
-                      <ul style={{ columns: 2 }}>
+                      <ul>
                         {activeCategories.map((c) => (
                           <li key={c.id}>
                             <Link href={`/produits?categorie=${c.slug}`}>{c.name}</Link>

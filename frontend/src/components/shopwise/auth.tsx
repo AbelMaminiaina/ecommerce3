@@ -63,22 +63,23 @@ function passwordScore(pw: string): number {
   return Math.min(score, 4);
 }
 
-const STRENGTH_LEVELS: [string, string][] = [
-  ['Utilisez lettres, chiffres et symboles.', 'transparent'],
-  ['Faible', '#dc3545'],
-  ['Moyen', '#f59e0b'],
-  ['Bon', '#22c55e'],
-  ['Excellent', '#0d9488'],
+// Libellé par niveau (0 à 4) ; largeur et couleur de la jauge : .strength-bar span[data-level] (shopwise-pages.css)
+const STRENGTH_LEVELS = [
+  'Utilisez lettres, chiffres et symboles.',
+  'Faible',
+  'Moyen',
+  'Bon',
+  'Excellent',
 ];
 
 // Jauge de robustesse du mot de passe
 export function PasswordStrength({ password }: { password: string }) {
   const score = password ? Math.max(passwordScore(password), 1) : 0;
-  const [label, color] = STRENGTH_LEVELS[score];
+  const label = STRENGTH_LEVELS[score];
   return (
     <div className="password-strength" aria-live="polite">
       <div className="strength-bar">
-        <span style={{ width: `${score * 25}%`, background: color }}></span>
+        <span data-level={score}></span>
       </div>
       <small className="strength-label">{label}</small>
     </div>

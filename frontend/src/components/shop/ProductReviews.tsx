@@ -44,8 +44,7 @@ function RatingInput({ value, onChange }: { value: number; onChange: (n: number)
           aria-label={`${n} étoile${n > 1 ? 's' : ''}`}
           onClick={() => onChange(n)}
           onMouseEnter={() => setHover(n)}
-          className="btn btn-link p-0 me-1 text-decoration-none"
-          style={{ color: n <= shown ? 'var(--bs-primary)' : '#ced4da', fontSize: 22 }}
+          className={`btn btn-link p-0 me-1 text-decoration-none review-star${n <= shown ? ' active' : ''}`}
         >
           <i className="bi bi-star-fill"></i>
         </button>
@@ -88,7 +87,7 @@ export function ReviewForm({ slug, onSaved }: { slug: string; onSaved: () => voi
   };
 
   return (
-    <div id="avis" style={{ scrollMarginTop: 90 }}>
+    <div id="avis" className="sw-anchor">
       <h4 className="mb-4 fw-bold">Laisser un avis</h4>
       {isAdmin ? (
         <p className="mb-0">Les comptes administrateurs ne peuvent pas noter les produits.</p>
