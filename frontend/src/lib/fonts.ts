@@ -1,26 +1,27 @@
-import { Inter, Quicksand, Roboto } from 'next/font/google';
+import localFont from 'next/font/local';
 
-// Polices du thème ShopWise, hébergées par le site lui-même : next/font les télécharge une seule fois au build
-// et les sert depuis /_next/static (aucune requête des visiteurs vers Google, pas de décalage à l'affichage).
-// Chaque police expose une variable CSS utilisée par shopwise.css et admin-shopwise.css.
+// Polices du thème ShopWise, fournies avec le code (src/fonts, licence SIL OFL) : ni le build ni les visiteurs
+// ne contactent Google. next/font les sert depuis /_next/static et génère des polices de repli ajustées
+// (pas de décalage à l'affichage). Chaque police expose une variable CSS utilisée par shopwise.css et admin-shopwise.css.
+// Fichiers « variables » : une seule source couvre toutes les graisses indiquées.
 
-const roboto = Roboto({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
+const roboto = localFont({
+  src: '../fonts/roboto-latin.woff2',
+  weight: '300 700',
   display: 'swap',
   variable: '--font-roboto',
 });
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const inter = localFont({
+  src: '../fonts/inter-latin.woff2',
+  weight: '400 700',
   display: 'swap',
   variable: '--font-inter',
 });
 
-const quicksand = Quicksand({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const quicksand = localFont({
+  src: '../fonts/quicksand-latin.woff2',
+  weight: '400 700',
   display: 'swap',
   variable: '--font-quicksand',
 });
