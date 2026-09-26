@@ -123,6 +123,10 @@ services:
       # Pas de NEXTAUTH_URL : NextAuth déduit l'adresse publique des en-têtes X-Forwarded-* (nginx)
       AUTH_TRUST_HOST: "true"
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET requis}
+      # Page /application : liens de téléchargement de l'application mobile (vides = « bientôt disponible »).
+      # APK déposé dans downloads/ (servi par nginx) : ANDROID_APP_URL=/telechargements/tsena-pro.apk dans .env.demo
+      ANDROID_APP_URL: ${ANDROID_APP_URL:-}
+      IOS_APP_URL: ${IOS_APP_URL:-}
     depends_on:
       - backend
     expose:
@@ -135,6 +139,8 @@ services:
       - "${DEMO_PORT:-8082}:80"
     volumes:
       - ./nginx/tsena-pro.conf:/etc/nginx/nginx.conf:ro
+      # Fichiers à télécharger (APK de l'application mobile), servis sous /telechargements/
+      - ./downloads:/usr/share/nginx/downloads:ro
     depends_on:
       - frontend
       - backend

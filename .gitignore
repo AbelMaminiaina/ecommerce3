@@ -38,3 +38,6 @@ nginx/ssl/
 nul
 NUL
 .env.demo
+
+# Fichiers à télécharger déposés sur le serveur (APK de l'application mobile)
+/downloads/
