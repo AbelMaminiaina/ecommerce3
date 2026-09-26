@@ -609,3 +609,10 @@ a:hover { color: color-mix(in srgb, var(--sw-accent), black 15%); }
 .sw-scroll-top i { font-size: 24px; line-height: 0; }
 .sw-scroll-top.active { opacity: 1; visibility: visible; }
 .sw-scroll-top:hover { background: color-mix(in srgb, var(--sw-accent), transparent 20%); }
+
+/* Mobile : colonnes Boutique / Aide / Informations centrées (titre et liens) ; le soulignement au survol part du centre */
+@media (max-width: 767.98px) {
+  .sw-footer-nav { text-align: center; }
+  .sw-footer-nav .sw-footer-links a::before { left: 50%; transform: translateX(-50%); }
+  .sw-footer-nav .sw-footer-links a:hover { padding-left: 0; }
+}

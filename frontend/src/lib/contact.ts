@@ -2,7 +2,7 @@
 // données structurées pour Google). Un seul endroit à modifier.
 
 export const CONTACT = {
-  email: 'savatry.milamina@gmail.com',
+  email: 'contact@tsenapro.shop',
   // À CONFIRMER : ces numéros sont ceux de l'ancien projet, à remplacer par les numéros de contact de Tsena Pro
   // (ajouter une ligne par numéro ; `tel` est le format international pour le lien « appeler »).
   phones: [{ display: '038 01 001 01', tel: '+261380100101' }],

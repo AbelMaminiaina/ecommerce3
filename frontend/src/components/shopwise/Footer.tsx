@@ -118,7 +118,7 @@ export function ShopwiseFooter() {
 
             {COLUMNS.map((column) => (
               <div key={column.title} className="col-lg-2 col-md-6 col-sm-6">
-                <div className="sw-footer-widget">
+                <div className="sw-footer-widget sw-footer-nav">
                   <h4>{column.title}</h4>
                   <ul className="sw-footer-links">
                     {column.links.map((link) => (
