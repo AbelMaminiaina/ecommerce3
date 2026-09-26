@@ -25,7 +25,7 @@ export function QuantityStepper({ value, moq, onChange, step = Math.max(1, moq) 
         onPress={() => onChange(clampToMoq(value - step, moq))}
         style={[styles.button, value <= moq && { opacity: 0.4 }]}
       >
-        <Text style={styles.sign}>−</Text>
+        <Text style={styles.minus}>−</Text>
       </Pressable>
       <TextInput
         accessibilityLabel="Quantité"
@@ -42,25 +42,28 @@ export function QuantityStepper({ value, moq, onChange, step = Math.max(1, moq) 
         accessibilityRole="button"
         accessibilityLabel="Augmenter la quantité"
         onPress={() => onChange(value + step)}
-        style={styles.button}
+        style={[styles.button, styles.plusButton]}
       >
-        <Text style={styles.sign}>+</Text>
+        <Text style={styles.plus}>+</Text>
       </Pressable>
     </View>
   );
 }
 
+// Style du kit Kutuku : « − » cerclé, « + » plein dans la couleur principale
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
+  row: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  button: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  sign: { fontSize: 20, color: colors.primary, fontFamily: fonts.bodyBold },
-  input: { minWidth: 56, textAlign: 'center', fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, paddingVertical: 8 },
+  plusButton: { backgroundColor: colors.primary, borderColor: colors.primary },
+  minus: { fontSize: 18, lineHeight: 20, color: colors.text, fontFamily: fonts.bodyBold },
+  plus: { fontSize: 18, lineHeight: 20, color: '#fff', fontFamily: fonts.bodyBold },
+  input: { minWidth: 52, textAlign: 'center', fontSize: 16, fontFamily: fonts.heading, color: colors.text, paddingVertical: 6 },
 });

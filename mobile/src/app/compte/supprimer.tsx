@@ -16,7 +16,7 @@ export default function DeleteAccount() {
     setError(null);
     try {
       await deleteAccount(password);
-      router.dismissTo('/compte');
+      router.dismissTo('/profil');
     } catch (e) {
       setError(errorMessage(e) ?? 'Suppression impossible');
     } finally {

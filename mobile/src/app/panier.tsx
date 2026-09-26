@@ -1,12 +1,12 @@
 import { Link, router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatPrice, formatQuantity, lineUnitPrice, summarizeCart } from '@tsena/shared';
-import { ProductImage } from '../../components/ProductImage';
-import { QuantityStepper } from '../../components/QuantityStepper';
-import { Body, Button, Card, Message, Row } from '../../components/ui';
-import { useTieredPricing } from '../../features/auth/store';
-import { useCart } from '../../features/cart/store';
-import { colors, fonts } from '../../theme';
+import { ProductImage } from '../components/ProductImage';
+import { QuantityStepper } from '../components/QuantityStepper';
+import { Body, Button, Card, Message, Row } from '../components/ui';
+import { useTieredPricing } from '../features/auth/store';
+import { useCart } from '../features/cart/store';
+import { colors, fonts } from '../theme';
 
 export default function Cart() {
   const { items, setQuantity, remove } = useCart();

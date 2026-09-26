@@ -2,33 +2,39 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
-import { useCartCount } from '../../features/cart/store';
+import { HeaderActions } from '../../components/HeaderActions';
 import { colors, fonts } from '../../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
-function icon(name: IconName) {
-  return function TabIcon({ color, size }: { color: ColorValue; size: number }) {
-    return <Ionicons name={name} color={color as string} size={size} />;
+
+// Onglets du kit Kutuku : icône pleine et couleur principale pour l'onglet actif, contour sinon
+function icon(active: IconName, inactive: IconName) {
+  return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} color={color as string} size={24} />;
   };
 }
 
 export default function TabLayout() {
-  const cartCount = useCartCount();
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarLabelStyle: { fontFamily: fonts.body },
-        headerTitleStyle: { fontFamily: fonts.heading, color: colors.text },
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: { fontFamily: fonts.bodyBold, fontSize: 11 },
+        tabBarStyle: { borderTopColor: colors.border },
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleAlign: 'center',
+        headerTitleStyle: { fontFamily: fonts.heading, color: colors.text, fontSize: 17 },
+        headerRight: () => <HeaderActions search={false} />,
+        headerRightContainerStyle: { paddingRight: 20 },
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Accueil', headerTitle: 'Tsena Pro', tabBarIcon: icon('home-outline') }} />
-      <Tabs.Screen name="catalogue" options={{ title: 'Catalogue', tabBarIcon: icon('grid-outline') }} />
-      <Tabs.Screen
-        name="panier"
-        options={{ title: 'Panier', tabBarIcon: icon('cart-outline'), tabBarBadge: cartCount || undefined }}
-      />
-      <Tabs.Screen name="compte" options={{ title: 'Compte', tabBarIcon: icon('person-outline') }} />
+      <Tabs.Screen name="index" options={{ title: 'Accueil', headerShown: false, tabBarIcon: icon('home', 'home-outline') }} />
+      <Tabs.Screen name="commandes" options={{ title: 'Mes commandes', tabBarIcon: icon('receipt', 'receipt-outline') }} />
+      <Tabs.Screen name="favoris" options={{ title: 'Favoris', tabBarIcon: icon('heart', 'heart-outline') }} />
+      <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: icon('person', 'person-outline') }} />
     </Tabs>
   );
 }

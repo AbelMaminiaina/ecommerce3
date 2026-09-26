@@ -34,7 +34,7 @@ function Choice({ selected, onPress, title, detail }: { selected: boolean; onPre
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      style={[styles.choice, selected && { borderColor: colors.primary, backgroundColor: '#f0fdfa' }]}
+      style={[styles.choice, selected && { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}
     >
       <View style={[styles.radio, selected && { borderColor: colors.primary }]}>{selected ? <View style={styles.radioDot} /> : null}</View>
       <View style={{ flex: 1 }}>

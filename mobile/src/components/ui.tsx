@@ -1,4 +1,5 @@
-import { forwardRef, type ReactNode } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { forwardRef, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,7 +12,7 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import { colors, fonts } from '../theme';
+import { colors, fonts, radius } from '../theme';
 
 export function Title({ style, ...props }: TextProps) {
   return <Text {...props} style={[styles.title, style]} />;
@@ -25,10 +26,11 @@ interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> {
   title: string;
   variant?: 'primary' | 'outline' | 'danger';
   loading?: boolean;
+  icon?: ComponentProps<typeof Ionicons>['name'];
   style?: ViewStyle;
 }
 
-export function Button({ title, variant = 'primary', loading, disabled, style, ...props }: ButtonProps) {
+export function Button({ title, variant = 'primary', loading, disabled, icon, style, ...props }: ButtonProps) {
   const inactive = !!(disabled || loading);
   const filled = variant !== 'outline';
   const tint = variant === 'danger' ? colors.danger : colors.primary;
@@ -48,7 +50,10 @@ export function Button({ title, variant = 'primary', loading, disabled, style, .
       {loading ? (
         <ActivityIndicator color={filled ? '#fff' : tint} />
       ) : (
-        <Text style={[styles.buttonText, { color: filled ? '#fff' : tint }]}>{title}</Text>
+        <>
+          {icon ? <Ionicons name={icon} size={18} color={filled ? '#fff' : tint} /> : null}
+          <Text style={[styles.buttonText, { color: filled ? '#fff' : tint }]}>{title}</Text>
+        </>
       )}
     </Pressable>
   );
@@ -129,19 +134,28 @@ export const styles = StyleSheet.create({
   label: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text, marginBottom: 4 },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontSize: 15,
     fontFamily: fonts.body,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     color: colors.text,
   },
   error: { color: colors.danger, fontSize: 13, marginTop: 4, fontFamily: fonts.body },
-  button: { borderWidth: 1, borderRadius: 8, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
+  button: {
+    flexDirection: 'row',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   buttonText: { fontFamily: fonts.bodyBold, fontSize: 15 },
-  card: { backgroundColor: colors.card, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border },
+  card: { backgroundColor: colors.card, borderRadius: radius.md, padding: 16, borderWidth: 1, borderColor: colors.border },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
   screen: { padding: 16, paddingBottom: 32, gap: 16 },

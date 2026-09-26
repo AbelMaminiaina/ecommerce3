@@ -33,3 +33,12 @@ export const setSessionExpiredHandler = (handler: () => void) => {
 };
 
 export const api = createApiClient({ baseUrl: API_URL, session: sessionStore, onSessionExpired: () => onExpired?.() });
+
+// Images du catalogue de démonstration (« /electro/img/… ») : servies par le site, pas par le backend.
+// En production site et API partagent le domaine ; en développement EXPO_PUBLIC_SITE_URL pointe vers le site.
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/+$/, '');
+
+export function imageUrl(path: string | null | undefined): string | null {
+  if (path && SITE_URL && path.startsWith('/') && !path.startsWith('/uploads/')) return `${SITE_URL}${path}`;
+  return api.assetUrl(path);
+}

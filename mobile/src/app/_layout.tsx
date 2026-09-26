@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Quicksand_700Bold } from '@expo-google-fonts/quicksand';
-import { Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -27,7 +30,7 @@ const queryClient = new QueryClient({
 const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: 'tsena.query-cache' });
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Quicksand_700Bold, Roboto_400Regular, Roboto_700Bold });
+  const [fontsLoaded] = useFonts({ PlusJakartaSans_400Regular, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold });
   const authStatus = useAuth((s) => s.status);
 
   useEffect(() => {
@@ -59,12 +62,17 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerTintColor: colors.primary,
-          headerTitleStyle: { fontFamily: fonts.heading, color: colors.text },
+          headerTitleStyle: { fontFamily: fonts.heading, color: colors.text, fontSize: 17 },
           headerBackTitle: 'Retour',
+          headerTitleAlign: 'center',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: colors.background },
           contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="catalogue" options={{ title: 'Catalogue' }} />
+        <Stack.Screen name="panier" options={{ title: 'Mon panier' }} />
         <Stack.Screen name="auth/connexion" options={{ title: 'Connexion', presentation: 'modal' }} />
         <Stack.Screen name="auth/inscription" options={{ title: 'Créer un compte', presentation: 'modal' }} />
       </Stack>

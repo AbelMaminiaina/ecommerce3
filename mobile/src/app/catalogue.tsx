@@ -3,10 +3,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { catalogApi } from '@tsena/shared';
-import { ProductCard } from '../../components/ProductCard';
-import { Body, Button, Message, errorMessage, styles as ui } from '../../components/ui';
-import { api } from '../../lib/api';
-import { colors, fonts } from '../../theme';
+import { ProductCard } from '../components/ProductCard';
+import { Body, Button, Message, errorMessage, styles as ui } from '../components/ui';
+import { api } from '../lib/api';
+import { colors, fonts } from '../theme';
 
 const PAGE_SIZE = 20;
 
