@@ -1,11 +1,12 @@
 import prisma from '../lib/prisma.js';
 import { connectRedis } from '../lib/redis.js';
 import { invalidateProductCache } from '../lib/cache.js';
-import { saveDataUriImage } from '../lib/uploads.js';
+import { ensureThumbnail, saveDataUriImage } from '../lib/uploads.js';
 
 // Convertit les images encore stockées en data: URI (ancien stockage) en fichiers sous /uploads,
-// pour les produits et les catégories. Sans effet s'il n'y a rien à convertir : il est lancé à chaque
-// démarrage du conteneur backend (voir Dockerfile) et peut être relancé à la main (npm run db:migrate-images).
+// pour les produits et les catégories, puis crée les miniatures manquantes des images téléversées.
+// Sans effet s'il n'y a rien à faire : il est lancé à chaque démarrage du conteneur backend (voir Dockerfile)
+// et peut être relancé à la main (npm run db:migrate-images).
 
 const isDataUri = (value: string | null | undefined): value is string => !!value && value.startsWith('data:');
 
@@ -42,12 +43,18 @@ async function main() {
     converted++;
   }
 
-  if (converted > 0) {
-    // Les réponses mises en cache contiennent encore les anciennes images
-    await connectRedis();
-    await invalidateProductCache().catch((error) => console.error('[images] invalidation du cache impossible', error));
+  // Miniatures des images téléversées avant leur introduction
+  let thumbnails = 0;
+  const withImages = await prisma.product.findMany({ select: { images: true } });
+  for (const image of withImages.flatMap((p) => p.images)) {
+    if (await ensureThumbnail(image)) thumbnails++;
   }
-  console.log(`[images] ${converted} image(s) convertie(s) en fichiers`);
+
+  // Au démarrage (nouvelle version), les listes en cache peuvent dater de l'ancienne : anciennes images,
+  // champs ajoutés depuis (ex. thumbnails). On repart d'un cache vide.
+  await connectRedis();
+  await invalidateProductCache().catch((error) => console.error('[images] invalidation du cache impossible', error));
+  console.log(`[images] ${converted} image(s) convertie(s) en fichiers, ${thumbnails} miniature(s) créée(s)`);
 }
 
 main()

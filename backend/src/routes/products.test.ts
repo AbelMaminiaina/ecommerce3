@@ -81,6 +81,52 @@ describe('GET /api/products', () => {
     expect(res.body.products[0].metadata).toEqual({ dimensions: null, weight: null });
   });
 
+  it('returns the whole list without pagination fields when no limit is given (web site)', async () => {
+    prismaMock.product.findMany.mockResolvedValue([baseProduct(), baseProduct({ id: 'p2', slug: 'p2' })] as any);
+
+    const res = await request(buildApp()).get('/api/products');
+
+    expect(res.body.total).toBe(2);
+    expect(res.body).not.toHaveProperty('hasMore');
+    const call = prismaMock.product.findMany.mock.calls[0][0] as any;
+    expect(call.skip).toBeUndefined();
+    expect(call.take).toBeUndefined();
+  });
+
+  it('paginates when a limit is given (mobile app)', async () => {
+    prismaMock.$transaction.mockImplementation((ops: any) => Promise.all(ops));
+    prismaMock.product.findMany.mockResolvedValue([baseProduct({ id: 'p3', slug: 'p3' })] as any);
+    prismaMock.product.count.mockResolvedValue(25);
+
+    const res = await request(buildApp()).get('/api/products?page=3&limit=10');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 25, page: 3, limit: 10, hasMore: false });
+    expect(prismaMock.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 20, take: 10 }));
+
+    const first = await request(buildApp()).get('/api/products?page=1&limit=10');
+    expect(first.body.hasMore).toBe(true);
+  });
+
+  it.each(['limit=0', 'limit=101', 'page=0&limit=10', 'limit=abc'])('rejects invalid pagination (%s)', async (query) => {
+    const res = await request(buildApp()).get(`/api/products?${query}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Pagination invalide (page ≥ 1, limit entre 1 et 100)');
+  });
+
+  it('exposes a thumbnail for each uploaded image, and keeps other images as they are', async () => {
+    prismaMock.product.findMany.mockResolvedValue([
+      baseProduct({ images: ['/uploads/0f0e3a52-1111-4222-8333-944455556666.webp', '/electro/img/product-3.png'] }),
+    ] as any);
+
+    const res = await request(buildApp()).get('/api/products');
+
+    expect(res.body.products[0].thumbnails).toEqual([
+      '/uploads/0f0e3a52-1111-4222-8333-944455556666-thumb.webp',
+      '/electro/img/product-3.png',
+    ]);
+  });
+
   it('filters by category, converting dashes to underscores', async () => {
     prismaMock.product.findMany.mockResolvedValue([]);
 

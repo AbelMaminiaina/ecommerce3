@@ -28,8 +28,12 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Middleware
+// En développement, l'aperçu web de l'application mobile (Expo, port 8081) est aussi autorisé.
+// Les applications Android et iPhone n'envoient pas d'en-tête Origin : le CORS ne les concerne pas.
+const corsOrigins = [process.env.FRONTEND_URL || 'http://localhost:3000'];
+if (process.env.NODE_ENV !== 'production') corsOrigins.push('http://localhost:8081');
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
 }));
 // Les images arrivent en fichiers (POST /api/uploads), plus en JSON : les corps JSON restent petits

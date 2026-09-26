@@ -1,6 +1,6 @@
 # Architecture
 
-Règles d'organisation du code. Elles décrivent l'état actuel du projet : tout nouveau code doit les suivre.
+Règles d'organisation du code (application mobile : voir [ARCHITECTURE-MOBILE.md](./ARCHITECTURE-MOBILE.md)). Elles décrivent l'état actuel du projet : tout nouveau code doit les suivre.
 Si une règle doit évoluer, modifiez ce fichier en même temps que le code.
 
 ## Vue d'ensemble

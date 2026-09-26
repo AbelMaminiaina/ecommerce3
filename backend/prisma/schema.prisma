@@ -9,18 +9,18 @@ datasource db {
 
 // Catégories de produits (table dynamique)
 model Category {
-  id          String    @id @default(uuid())
-  name        String    // Nom affiché (ex: "Quincaillerie")
-  slug        String    @unique // Identifiant URL (ex: "quincaillerie")
+  id          String  @id @default(uuid())
+  name        String // Nom affiché (ex: "Quincaillerie")
+  slug        String  @unique // Identifiant URL (ex: "quincaillerie")
   description String?
   image       String?
-  order       Int       @default(0) // Ordre d'affichage
-  isActive    Boolean   @default(true)
+  order       Int     @default(0) // Ordre d'affichage
+  isActive    Boolean @default(true)
 
-  products    Product[]
+  products Product[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("categories")
 }
@@ -112,16 +112,16 @@ enum InvoiceStatus {
 
 // Compte professionnel (grossiste acheteur)
 model Company {
-  id               String        @id @default(uuid())
-  name             String
-  legalName        String?
-  taxId            String        @unique
-  status           CompanyStatus @default(pending)
-  paymentTerms     PaymentTerms?
-  creditLimit      Int?          // Plafond de crédit en Ariary
-  contactEmail     String
-  contactPhone     String?
-  rejectionReason  String?
+  id              String        @id @default(uuid())
+  name            String
+  legalName       String?
+  taxId           String        @unique
+  status          CompanyStatus @default(pending)
+  paymentTerms    PaymentTerms?
+  creditLimit     Int? // Plafond de crédit en Ariary
+  contactEmail    String
+  contactPhone    String?
+  rejectionReason String?
 
   // Commission de la plateforme : pourcentage du sous-total de chaque commande du vendeur.
   // null = taux par défaut de la plateforme (variable d'environnement PLATFORM_COMMISSION_RATE).
@@ -131,41 +131,60 @@ model Company {
   payoutNumber      String?
   payoutAccountName String?
 
-  users            User[]
-  addresses        Address[]
-  orders           Order[]   @relation("BuyerOrders")
-  sellerOrders     Order[]   @relation("SellerOrders")
-  products         Product[] @relation("SellerProducts")
-  invoices         Invoice[]
-  payouts          Payout[]  @relation("SellerPayouts")
+  users        User[]
+  addresses    Address[]
+  orders       Order[]   @relation("BuyerOrders")
+  sellerOrders Order[]   @relation("SellerOrders")
+  products     Product[] @relation("SellerProducts")
+  invoices     Invoice[]
+  payouts      Payout[]  @relation("SellerPayouts")
 
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("companies")
 }
 
 // Utilisateur (rattaché à une entreprise, sauf le staff plateforme)
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   passwordHash String
   firstName    String
   lastName     String
   phone        String?
   role         UserRole
 
-  companyId    String?
-  company      Company?  @relation(fields: [companyId], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
-  addresses    Address[]
-  orders       Order[]
-  reviews      Review[]
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  refreshTokens RefreshToken[]
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  // Compte supprimé à la demande de l'utilisateur (données personnelles anonymisées, commandes conservées)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+// Jetons de renouvellement de session (application mobile) : seule leur empreinte SHA-256 est stockée.
+// Chaque renouvellement révoque le jeton utilisé et en émet un nouveau (rotation).
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 // Palier de prix dégressif par quantité (au-delà de minQty, le prix unitaire devient unitPrice)
@@ -175,7 +194,7 @@ model PriceTier {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   minQty    Int
-  unitPrice Int     // Prix unitaire en Ariary à partir de minQty
+  unitPrice Int // Prix unitaire en Ariary à partir de minQty
 
   @@index([productId, minQty])
   @@map("price_tiers")
@@ -183,48 +202,48 @@ model PriceTier {
 
 // Produits
 model Product {
-  id               String           @id @default(uuid())
+  id               String         @id @default(uuid())
   name             String
-  slug             String           @unique
-  category         String           // Slug de catégorie (underscores), libre — voir table Category
-  categoryId       String?          // Nouvelle relation
-  categoryRef      Category?        @relation(fields: [categoryId], references: [id])
+  slug             String         @unique
+  category         String // Slug de catégorie (underscores), libre — voir table Category
+  categoryId       String? // Nouvelle relation
+  categoryRef      Category?      @relation(fields: [categoryId], references: [id])
   description      String
   shortDescription String
-  price            Int              // Prix unitaire de base en Ariary (avant paliers)
-  originalPrice    Int?             // Prix original (pour les promos)
+  price            Int // Prix unitaire de base en Ariary (avant paliers)
+  originalPrice    Int? // Prix original (pour les promos)
   images           String[]
-  inStock          Boolean          @default(true)
-  stockQuantity    Int              @default(0)
-  isActive         Boolean          @default(true)  // Masquer du catalogue sans supprimer
+  inStock          Boolean        @default(true)
+  stockQuantity    Int            @default(0)
+  isActive         Boolean        @default(true) // Masquer du catalogue sans supprimer
   badges           ProductBadge[]
   characteristics  String[]
 
   // Vente en gros
-  moq               Int             @default(1)      // Quantité minimum de commande
-  unit              String          @default("piece") // Unité de vente (piece, carton, palette, kg...)
-  priceTiers        PriceTier[]
+  moq        Int         @default(1) // Quantité minimum de commande
+  unit       String      @default("piece") // Unité de vente (piece, carton, palette, kg...)
+  priceTiers PriceTier[]
 
   // Logistique
-  estimatedWeightKg Float?          // Poids estimé indicatif — n'entre JAMAIS dans le calcul du prix
-  freeShipping      Boolean         @default(false) // Si true, la commande contenant ce produit est livrée gratuitement
-  availableFrom     DateTime?       // Date de disponibilité — avant cette date le client peut réserver (précommande)
+  estimatedWeightKg Float? // Poids estimé indicatif — n'entre JAMAIS dans le calcul du prix
+  freeShipping      Boolean   @default(false) // Si true, la commande contenant ce produit est livrée gratuitement
+  availableFrom     DateTime? // Date de disponibilité — avant cette date le client peut réserver (précommande)
 
   // Metadata libre (accessoires, etc.)
-  dimensions       String?
-  weight           String?
+  dimensions String?
+  weight     String?
 
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Publication par une entreprise vendeuse (null = produit de la plateforme)
-  sellerId         String?
-  seller           Company?         @relation("SellerProducts", fields: [sellerId], references: [id])
-  status           ProductStatus    @default(approved)
-  rejectionReason  String?
+  sellerId        String?
+  seller          Company?      @relation("SellerProducts", fields: [sellerId], references: [id])
+  status          ProductStatus @default(approved)
+  rejectionReason String?
 
-  orderItems       OrderItem[]
-  reviews          Review[]
+  orderItems OrderItem[]
+  reviews    Review[]
 
   @@index([sellerId])
   @@index([status])
@@ -233,14 +252,14 @@ model Product {
 
 // Avis clients : une note de 1 à 5 (et un commentaire facultatif) par utilisateur et par produit
 model Review {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  rating    Int      // 1 à 5
-  comment   String?
+  rating  Int // 1 à 5
+  comment String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -252,8 +271,8 @@ model Review {
 
 // Clients (historique B2C — conservé en lecture seule, plus utilisé pour les nouvelles commandes)
 model Customer {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String  @id @default(uuid())
+  email     String  @unique
   firstName String
   lastName  String
   phone     String?
@@ -269,7 +288,7 @@ model Customer {
 
 // Adresses
 model Address {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
   companyId  String?
@@ -283,10 +302,10 @@ model Address {
   country    String  @default("Madagascar")
   isDefault  Boolean @default(false)
 
-  orders     Order[]
+  orders Order[]
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("addresses")
 }
@@ -310,32 +329,32 @@ enum DeliveryMethod {
 
 // Commandes
 model Order {
-  id             String         @id @default(uuid())
-  orderNumber    String         @unique
+  id          String @id @default(uuid())
+  orderNumber String @unique
 
   // Historique B2C (conservé, plus utilisé pour les nouvelles commandes)
-  customerId     String?
-  customer       Customer?      @relation(fields: [customerId], references: [id])
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
 
   // Commandes B2B
-  companyId      String?
-  company        Company?       @relation("BuyerOrders", fields: [companyId], references: [id])
-  userId         String?
-  user           User?          @relation(fields: [userId], references: [id])
+  companyId String?
+  company   Company? @relation("BuyerOrders", fields: [companyId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
 
-  addressId      String?
-  address        Address?       @relation(fields: [addressId], references: [id])
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
 
   // Vendeur (entreprise qui a publié les produits) ; null = produits de la plateforme.
   // Un panier multi-vendeurs est scindé en une commande par vendeur (même checkoutGroup).
   // Commande sans compte (invité) : coordonnées saisies au paiement, paiement à la livraison/retrait
-  guestName      String?
-  guestEmail     String?
-  guestPhone     String?
+  guestName  String?
+  guestEmail String?
+  guestPhone String?
 
-  sellerId       String?
-  seller         Company?       @relation("SellerOrders", fields: [sellerId], references: [id])
-  checkoutGroup  String?
+  sellerId      String?
+  seller        Company? @relation("SellerOrders", fields: [sellerId], references: [id])
+  checkoutGroup String?
 
   status         OrderStatus    @default(pending)
   deliveryMethod DeliveryMethod
@@ -343,17 +362,17 @@ model Order {
   // Paiement Mobile Money (obligatoire) : la commande n'avance qu'une fois le paiement confirmé
   paymentMethod          PaymentMethod?
   paymentStatus          PaymentStatus  @default(awaiting)
-  paymentReference       String?        // Référence de la transaction fournie par le client
-  paymentPayerPhone      String?        // Numéro Mobile Money depuis lequel il a payé
+  paymentReference       String? // Référence de la transaction fournie par le client
+  paymentPayerPhone      String? // Numéro Mobile Money depuis lequel il a payé
   paymentSubmittedAt     DateTime?
   paidAt                 DateTime?
   paymentRejectionReason String?
   // Stock déjà décrémenté pour cette commande (à restituer en cas d'annulation)
   stockReserved          Boolean        @default(false)
 
-  subtotal       Int            // Prix en Ariary
-  shippingCost   Int            // Prix en Ariary
-  total          Int            // Prix en Ariary
+  subtotal     Int // Prix en Ariary
+  shippingCost Int // Prix en Ariary
+  total        Int // Prix en Ariary
 
   // Commission de la plateforme, figée à la confirmation du paiement (commandes de vendeurs uniquement) :
   // commissionAmount = subtotal x taux ; sellerAmount = total - commissionAmount (le vendeur livre, il
@@ -362,21 +381,21 @@ model Order {
   commissionAmount Int?
   sellerAmount     Int?
   payoutId         String?
-  payout           Payout?        @relation(fields: [payoutId], references: [id])
+  payout           Payout? @relation(fields: [payoutId], references: [id])
 
-  paymentAttempts  PaymentAttempt[]
+  paymentAttempts PaymentAttempt[]
 
-  paymentTerms   PaymentTerms?  // Conditions de paiement figées au moment de la commande
-  dueDate        DateTime?      // Échéance de paiement (facturation différée)
+  paymentTerms PaymentTerms? // Conditions de paiement figées au moment de la commande
+  dueDate      DateTime? // Échéance de paiement (facturation différée)
 
-  notes          String?
-  cancelReason   String?
+  notes        String?
+  cancelReason String?
 
-  items          OrderItem[]
-  invoice        Invoice?
+  items   OrderItem[]
+  invoice Invoice?
 
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([sellerId])
   @@index([checkoutGroup])
@@ -402,9 +421,9 @@ model Payout {
   paidByUserId    String?
   paidAt          DateTime     @default(now())
 
-  orders          Order[]
+  orders Order[]
 
-  createdAt       DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@index([sellerId])
   @@map("payouts")
@@ -414,22 +433,22 @@ model Payout {
 // commandes encore à payer au moment de la demande. `orderId` = commande de référence du panier.
 model PaymentAttempt {
   id                  String               @id @default(uuid())
-  provider            String               // 'mvola' | 'orange_money' | 'airtel_money'
+  provider            String // 'mvola' | 'orange_money' | 'airtel_money'
   orderId             String
   order               Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
   checkoutGroup       String?
   amount              Int
-  payerPhone          String               // numéro du client (vide pour Orange Money : il le saisit chez l'opérateur)
+  payerPhone          String // numéro du client (vide pour Orange Money : il le saisit chez l'opérateur)
   status              PaymentAttemptStatus @default(pending)
   serverCorrelationId String?              @unique // identifiant de suivi chez l'opérateur (MVola, Airtel) ou pay_token (Orange)
-  transactionId       String?              // identifiant de la transaction chez l'opérateur (une fois payée)
-  paymentUrl          String?              // page de paiement de l'opérateur où envoyer le client (Orange Money)
+  transactionId       String? // identifiant de la transaction chez l'opérateur (une fois payée)
+  paymentUrl          String? // page de paiement de l'opérateur où envoyer le client (Orange Money)
   notifToken          String?              @unique // jeton de notification de l'opérateur (Orange Money)
   providerStatus      String?
   failureReason       String?
 
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([orderId])
@@ -444,8 +463,8 @@ model OrderItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  quantity  Int
-  price     Int       // Prix unitaire en Ariary au moment de la commande (résolu depuis les paliers)
+  quantity      Int
+  price         Int // Prix unitaire en Ariary au moment de la commande (résolu depuis les paliers)
   availableFrom DateTime? // Date de disponibilité du produit figée au moment de la commande (réservation / précommande)
 
   createdAt DateTime @default(now())
@@ -455,30 +474,30 @@ model OrderItem {
 
 // Facture (paiement différé net-30 / net-60)
 model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String        @unique
-  orderId       String        @unique
-  order         Order         @relation(fields: [orderId], references: [id])
+  id            String  @id @default(uuid())
+  invoiceNumber String  @unique
+  orderId       String  @unique
+  order         Order   @relation(fields: [orderId], references: [id])
   companyId     String
-  company       Company       @relation(fields: [companyId], references: [id])
+  company       Company @relation(fields: [companyId], references: [id])
 
-  amount        Int           // Montant en Ariary
-  issueDate     DateTime      @default(now())
-  dueDate       DateTime
-  status        InvoiceStatus @default(sent)
-  paidAt        DateTime?
+  amount    Int // Montant en Ariary
+  issueDate DateTime      @default(now())
+  dueDate   DateTime
+  status    InvoiceStatus @default(sent)
+  paidAt    DateTime?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("invoices")
 }
 
 // Newsletter
 model NewsletterSubscriber {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  isActive  Boolean  @default(true)
+  id       String  @id @default(uuid())
+  email    String  @unique
+  isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -488,13 +507,13 @@ model NewsletterSubscriber {
 
 // Messages de contact
 model ContactMessage {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  phone     String?
-  subject   String
-  message   String
-  isRead    Boolean  @default(false)
+  id      String  @id @default(uuid())
+  name    String
+  email   String
+  phone   String?
+  subject String
+  message String
+  isRead  Boolean @default(false)
 
   createdAt DateTime @default(now())
 

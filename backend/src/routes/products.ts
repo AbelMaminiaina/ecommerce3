@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma.js';
 import { sendValidationError, singleMessage } from '../lib/validation.js';
-import { IMAGE_URL_PATTERN, deleteReplacedImages, deleteUploadedImages } from '../lib/uploads.js';
+import { IMAGE_URL_PATTERN, deleteReplacedImages, deleteUploadedImages, thumbnailUrl } from '../lib/uploads.js';
 import { withCache, CACHE_TTL, CACHE_KEYS, invalidateProductCache } from '../lib/cache.js';
 import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
 
@@ -11,6 +11,14 @@ const router = Router();
 // ---------- Validation des entrées (zod) ----------
 // Les messages reprennent ceux affichés par l'administration ; l'ordre des champs fixe l'ordre des vérifications
 // (la première erreur est renvoyée au client).
+
+// Pagination du catalogue, facultative : sans `limit`, toute la liste (comportement du site web).
+// Avec `limit` (application mobile) : une page de résultats et l'information `hasMore`.
+const PAGE = 'Pagination invalide (page ≥ 1, limit entre 1 et 100)';
+const paginationSchema = z.object({
+  page: z.coerce.number({ message: PAGE }).int(PAGE).min(1, PAGE).default(1),
+  limit: z.coerce.number({ message: PAGE }).int(PAGE).min(1, PAGE).max(100, PAGE).optional(),
+});
 
 const RATING = 'La note doit être un entier entre 1 et 5';
 const COMMENT = 'Le commentaire est limité à 1000 caractères';
@@ -106,6 +114,8 @@ function transformProduct(p: any, ratings?: RatingStats) {
     freeShipping: p.freeShipping ?? false,
     availableFrom: p.availableFrom ?? null,
     priceTiers: p.priceTiers ?? [],
+    // Miniatures (400 px) pour les listes de l'application mobile ; même ordre que images
+    thumbnails: (p.images ?? []).map(thumbnailUrl),
     metadata: {
       dimensions: p.dimensions,
       weight: p.weight,
@@ -117,9 +127,10 @@ function transformProduct(p: any, ratings?: RatingStats) {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { category, search, inStock, includeInactive, seller } = req.query;
+    const { page, limit } = paginationSchema.parse({ page: req.query.page, limit: req.query.limit });
 
     // Build cache key based on query params
-    const cacheKey = `${CACHE_KEYS.PRODUCTS}:list:${category || 'all'}:${search || ''}:${inStock || ''}:${includeInactive || ''}:${seller || ''}`;
+    const cacheKey = `${CACHE_KEYS.PRODUCTS}:list:${category || 'all'}:${search || ''}:${inStock || ''}:${includeInactive || ''}:${seller || ''}:${limit ? `${page}x${limit}` : 'all'}`;
 
     const result = await withCache(
       cacheKey,
@@ -157,27 +168,38 @@ router.get('/', async (req: Request, res: Response) => {
           where.isActive = true;
         }
 
-        const products = await prisma.product.findMany({
+        const query = {
           where,
-          include: { priceTiers: { orderBy: { minQty: 'asc' } }, seller: SELLER_SELECT },
+          include: { priceTiers: { orderBy: { minQty: 'asc' as const } }, seller: SELLER_SELECT },
           orderBy: [
-            { inStock: 'desc' },  // En stock en premier
-            { createdAt: 'desc' },
+            { inStock: 'desc' as const },  // En stock en premier
+            { createdAt: 'desc' as const },
+            { id: 'asc' as const },         // ordre stable d'une page à l'autre
           ],
-        });
+        };
+
+        // Liste complète (site web) ou une page (application mobile)
+        const [products, total] = limit
+          ? await prisma.$transaction([
+              prisma.product.findMany({ ...query, skip: (page - 1) * limit, take: limit }),
+              prisma.product.count({ where }),
+            ])
+          : await prisma.product.findMany(query).then((all) => [all, all.length] as const);
 
         const ratings = await getRatingStats(products.map((p) => p.id));
         const transformedProducts = products.map((p) => transformProduct(p, ratings));
 
         return {
           products: transformedProducts,
-          total: transformedProducts.length,
+          total,
+          ...(limit ? { page, limit, hasMore: page * limit < total } : {}),
         };
       }
     );
 
     res.json(result);
   } catch (error: any) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error fetching products:', error);
     res.status(500).json({
       error: 'Failed to fetch products',

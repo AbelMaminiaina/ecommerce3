@@ -53,6 +53,39 @@ describe('saveImage', () => {
   });
 });
 
+describe('miniatures', () => {
+  it('crée une miniature de 400 px à côté de chaque image', async () => {
+    const url = await uploads.saveImage(await png(2000, 1000));
+    const thumb = uploads.thumbnailUrl(url);
+
+    expect(thumb).toBe(url.replace('.webp', '-thumb.webp'));
+    const meta = await sharp(await fs.readFile(fileOf(thumb))).metadata();
+    expect([meta.width, meta.height, meta.format]).toEqual([400, 200, 'webp']);
+  });
+
+  it('ne crée pas de miniature pour les URL qui ne sont pas des images téléversées', () => {
+    expect(uploads.thumbnailUrl('/electro/img/product-3.png')).toBe('/electro/img/product-3.png');
+    expect(uploads.thumbnailUrl('https://exemple.com/a.webp')).toBe('https://exemple.com/a.webp');
+  });
+
+  it('recrée la miniature manquante d’une ancienne image, une seule fois', async () => {
+    const url = await uploads.saveImage(await png(900, 900));
+    await fs.rm(fileOf(uploads.thumbnailUrl(url)));
+
+    expect(await uploads.ensureThumbnail(url)).toBe(true);
+    expect(await uploads.ensureThumbnail(url)).toBe(false);
+    await expect(fs.stat(fileOf(uploads.thumbnailUrl(url)))).resolves.toBeTruthy();
+  });
+
+  it('supprime la miniature avec l’image', async () => {
+    const url = await uploads.saveImage(await png(10, 10));
+    await uploads.deleteUploadedImages([url]);
+
+    await expect(fs.stat(fileOf(url))).rejects.toThrow();
+    await expect(fs.stat(fileOf(uploads.thumbnailUrl(url)))).rejects.toThrow();
+  });
+});
+
 describe('suppression des fichiers', () => {
   it('supprime les images retirées et garde les autres', async () => {
     const kept = await uploads.saveImage(await png(10, 10));
