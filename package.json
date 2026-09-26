@@ -9,9 +9,15 @@
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:mobile": "npm run start -w tsena-pro-mobile",
+    "test:shared": "npm test -w @tsena/shared"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
-  }
+  },
+  "workspaces": [
+    "packages/*",
+    "mobile"
+  ]
 }
