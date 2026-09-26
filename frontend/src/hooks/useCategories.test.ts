@@ -14,6 +14,7 @@ beforeEach(() => {
 describe('useCategories', () => {
   it('fetches categories once and exposes them with loading resolved', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ categories: sampleCategories }),
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -31,6 +32,7 @@ describe('useCategories', () => {
 
   it('deduplicates concurrent requests across hook instances', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ categories: sampleCategories }),
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -60,6 +62,7 @@ describe('useCategories', () => {
 describe('useProductCategories', () => {
   it('keeps only the active categories', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: () =>
         Promise.resolve({
           categories: [
@@ -82,6 +85,7 @@ describe('useProductCategories', () => {
 describe('invalidateCategoriesCache', () => {
   it('forces the next call to refetch', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ categories: sampleCategories }),
     });
     vi.stubGlobal('fetch', fetchMock);

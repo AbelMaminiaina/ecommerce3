@@ -15,7 +15,7 @@ export class OperatorError extends Error {
 
 export type FetchFn = typeof fetch;
 
-export const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 // Appel HTTP avec délai maximal ; toute erreur devient une OperatorError. Renvoie le JSON (ou null si le corps est vide).
 export async function operatorFetch(

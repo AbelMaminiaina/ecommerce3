@@ -3,3 +3,6 @@ dist
 coverage
 .env
 .env.local
+
+# Images téléversées (volume Docker en production)
+uploads/

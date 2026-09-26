@@ -464,7 +464,7 @@ router.get('/orders/mine', authenticate, requireCanOrder, async (req: Request, r
         seller: { select: { name: true } },
         address: true,
         items: {
-          include: { product: { select: { name: true, slug: true } } },
+          include: { product: { select: { name: true, slug: true, images: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -497,6 +497,8 @@ router.get('/orders/mine', authenticate, requireCanOrder, async (req: Request, r
         : null,
       items: order.items.map((item) => ({
         name: item.product.name,
+        slug: item.product.slug,
+        image: item.product.images[0] ?? null,
         quantity: item.quantity,
         price: item.price,
         availableFrom: item.availableFrom,

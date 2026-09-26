@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('payments API', () => {
   it('lists the configured Mobile Money methods', async () => {
-    const fetchMock = mockFetchJson({ methods: [{ id: 'mvola', label: 'MVola', number: '034', accountName: 'All' }] });
+    const fetchMock = mockFetchJson({ methods: [{ id: 'mvola', label: 'MVola', number: '034', accountName: 'Tsena Pro' }] });
 
     const methods = await getPaymentMethods();
 

@@ -1,16 +1,18 @@
 import Script from 'next/script';
+import { CONTACT } from '@/lib/contact';
+import { SITE_URL } from '@/lib/site';
 
 // Organisation / Entreprise
 export function OrganizationJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'All',
-    alternateName: 'All B2B',
-    url: 'https://all.mg',
-    logo: 'https://all.mg/icon.svg',
+    name: 'Tsena Pro',
+    alternateName: 'TsenaPro',
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon.svg`,
     description:
-      'All est une plateforme de vente en gros pour professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money, livraison à Antananarivo.',
+      'Tsena Pro est une plateforme de vente en gros pour professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money, livraison à Antananarivo.',
     address: {
       '@type': 'PostalAddress',
       streetAddress: CONTACT.address.street,
@@ -25,8 +27,8 @@ export function OrganizationJsonLd() {
       availableLanguage: ['French', 'Malagasy'],
     },
     sameAs: [
-      'https://www.facebook.com/all.mg',
-      'https://www.instagram.com/all.mg',
+      'https://www.facebook.com/tsenapro',
+      'https://www.instagram.com/tsenapro',
     ],
   };
 
@@ -44,12 +46,12 @@ export function LocalBusinessJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
-    '@id': 'https://all.mg/#localbusiness',
-    name: 'All',
-    image: 'https://all.mg/icon.svg',
+    '@id': `${SITE_URL}/#localbusiness`,
+    name: 'Tsena Pro',
+    image: `${SITE_URL}/icon.svg`,
     description:
       'Plateforme de vente en gros pour professionnels à Madagascar : catalogue multi-catégories, tarifs dégressifs par quantité, paiement par Mobile Money.',
-    url: 'https://all.mg',
+    url: SITE_URL,
     email: CONTACT.email,
     address: {
       '@type': 'PostalAddress',
@@ -115,12 +117,12 @@ export function ProductJsonLd({
     description,
     image: image.startsWith('http')
       ? image
-      : `https://all.mg${image}`,
-    url: `https://all.mg/produits/${slug}`,
+      : `${SITE_URL}${image}`,
+    url: `${SITE_URL}/produits/${slug}`,
     sku: sku || slug,
     brand: {
       '@type': 'Brand',
-      name: 'All',
+      name: 'Tsena Pro',
     },
     offers: {
       '@type': 'Offer',
@@ -129,7 +131,7 @@ export function ProductJsonLd({
       availability: `https://schema.org/${availability}`,
       seller: {
         '@type': 'Organization',
-        name: 'All',
+        name: 'Tsena Pro',
       },
     },
   };
@@ -170,42 +172,13 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
   );
 }
 
-// FAQ
-interface FAQItem {
-  question: string;
-  answer: string;
-}
-
-export function FAQJsonLd({ items }: { items: FAQItem[] }) {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
-    })),
-  };
-
-  return (
-    <Script
-      id="faq-jsonld"
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
-  );
-}
-
 // WebSite avec SearchAction
 export function WebsiteJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'All',
-    url: 'https://all.mg',
+    name: 'Tsena Pro',
+    url: SITE_URL,
     description:
       'Plateforme de vente en gros pour professionnels à Madagascar - tarifs dégressifs, paiement par Mobile Money.',
     inLanguage: 'fr-MG',
@@ -213,7 +186,7 @@ export function WebsiteJsonLd() {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://all.mg/produits?search={search_term_string}',
+        urlTemplate: `${SITE_URL}/produits?search={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -227,4 +200,3 @@ export function WebsiteJsonLd() {
     />
   );
 }
-import { CONTACT } from '@/lib/contact';

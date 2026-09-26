@@ -84,3 +84,19 @@ export async function trackGuestOrder(orderNumber: string, email: string): Promi
   const params = new URLSearchParams({ orderNumber, email });
   return fetchAPI<GuestOrder>(`/checkout/track?${params.toString()}`);
 }
+
+// ---------- Administration des commandes (platform_admin) ----------
+
+// Toutes les commandes ; `T` = forme utilisée par l'écran admin
+export async function getAllOrders<T>(token: string): Promise<{ orders: T[] }> {
+  return fetchAPI<{ orders: T[] }>('/checkout/orders', { token });
+}
+
+// Changement de statut ; `reason` accompagne une annulation
+export async function updateOrderStatus(orderId: string, status: string, token: string, reason?: string) {
+  return fetchAPI(`/checkout/orders/${orderId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, ...(reason !== undefined ? { reason } : {}) }),
+    token,
+  });
+}

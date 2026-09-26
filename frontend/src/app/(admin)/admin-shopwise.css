@@ -1,0 +1,578 @@
+/**
+ * Espace d'administration – thème « admin » du template ShopWise
+ * (shopwise/assets/css/admin.css), porté sans Bootstrap.
+ * 1. Variables, typographie et structure (barre latérale, barre supérieure, pied de page)
+ * 2. Composants ShopWise (panneaux, indicateurs, tableaux, pastilles, graphique…)
+ * 3. Recoloration des utilitaires Tailwind des pages existantes (ambre -> sarcelle, gris -> ardoise)
+ */
+
+/*--------------------------------------------------------------
+# Polices & couleurs
+--------------------------------------------------------------*/
+.sw-admin {
+  --default-font: "Roboto", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --heading-font: "Quicksand", sans-serif;
+  --nav-font: "Inter", sans-serif;
+
+  --background-color: #f4f7f6;
+  --default-color: #5a6577;
+  --heading-color: #10243d;
+  --accent-color: #0d9488;
+  --accent-dark: #0b7f75;
+  --surface-color: #ffffff;
+  --contrast-color: #ffffff;
+
+  --sidebar-bg: #112946;
+  --sidebar-color: #b8c4d6;
+  --sidebar-active: #ffffff;
+
+  --success-color: #16a34a;
+  --warning-color: #d97706;
+  --danger-color: #dc2626;
+  --info-color: #2563eb;
+
+  --border-color: color-mix(in srgb, var(--default-color), transparent 88%);
+  --muted-color: color-mix(in srgb, var(--default-color), transparent 30%);
+  --sidebar-width: 256px;
+
+  color: var(--default-color);
+  background-color: var(--background-color);
+  font-family: var(--default-font);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.sw-admin h1, .sw-admin h2, .sw-admin h3, .sw-admin h4, .sw-admin h5, .sw-admin h6 {
+  color: var(--heading-color);
+  font-family: var(--heading-font);
+  font-weight: 700;
+}
+
+/*--------------------------------------------------------------
+# Barre latérale
+--------------------------------------------------------------*/
+.admin-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-color);
+  display: flex;
+  flex-direction: column;
+  z-index: 1040;
+  transition: transform 0.25s ease;
+}
+
+.admin-sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.admin-sidebar .brand i { font-size: 24px; color: var(--accent-color); }
+.admin-sidebar .brand .sitename { font-family: var(--heading-font); font-size: 20px; font-weight: 700; color: #fff; }
+.admin-sidebar .brand .brand-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background-color: color-mix(in srgb, var(--accent-color), transparent 70%);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.admin-sidebar .sidebar-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--sidebar-color);
+  font-size: 18px;
+  line-height: 1;
+}
+.admin-sidebar .sidebar-close i { font-size: 18px; color: inherit; }
+
+.admin-sidebar .side-nav { flex: 1; overflow-y: auto; padding: 16px 12px; }
+.admin-sidebar .nav-label {
+  font-family: var(--nav-font);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 16px 12px 8px;
+}
+
+.admin-sidebar .side-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-family: var(--nav-font);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--sidebar-color);
+  transition: all 0.2s ease;
+}
+.admin-sidebar .side-link i { font-size: 17px; width: 20px; text-align: center; }
+.admin-sidebar .side-link:hover { background-color: rgba(255, 255, 255, 0.06); color: #fff; }
+.admin-sidebar .side-link.active { background-color: var(--accent-color); color: var(--sidebar-active); }
+.admin-sidebar .side-link .side-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  text-align: center;
+  background-color: var(--danger-color);
+  color: #fff;
+}
+
+.admin-sidebar .side-footer { padding: 16px 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 36, 61, 0.5);
+  z-index: 1035;
+}
+
+@media (max-width: 1023.98px) {
+  .admin-sidebar { transform: translateX(-100%); }
+  .sidebar-open .admin-sidebar { transform: none; }
+  .sidebar-open .sidebar-backdrop { display: block; }
+}
+@media (min-width: 1024px) {
+  .admin-sidebar .sidebar-close, .admin-topbar .sidebar-toggle { display: none; }
+}
+
+/*--------------------------------------------------------------
+# Zone principale
+--------------------------------------------------------------*/
+.admin-main { margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; }
+@media (max-width: 1023.98px) { .admin-main { margin-left: 0; } }
+
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background-color: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+}
+.admin-topbar .sidebar-toggle {
+  border: none;
+  background: none;
+  font-size: 24px;
+  color: var(--heading-color);
+  padding: 0 4px;
+}
+
+.admin-topbar .top-search { position: relative; flex: 1; max-width: 420px; }
+.admin-topbar .top-search i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: color-mix(in srgb, var(--default-color), transparent 50%);
+}
+.admin-topbar .top-search input {
+  width: 100%;
+  padding: 7px 12px 7px 36px;
+  border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--heading-color);
+  background-color: var(--surface-color);
+}
+.admin-topbar .top-search input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 85%);
+}
+@media (max-width: 767.98px) { .admin-topbar .top-search { display: none; } }
+
+.admin-topbar .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.admin-topbar .icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 18px;
+  color: var(--default-color);
+}
+.admin-topbar .icon-btn:hover { background-color: color-mix(in srgb, var(--default-color), transparent 94%); color: var(--accent-color); }
+.admin-topbar .icon-btn .dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--danger-color);
+  border: 2px solid var(--surface-color);
+}
+
+.admin-topbar .admin-user { display: flex; align-items: center; gap: 10px; padding-left: 8px; }
+.admin-topbar .admin-user strong { display: block; color: var(--heading-color); font-size: 13px; line-height: 1.2; }
+.admin-topbar .admin-user small { font-size: 12px; color: var(--muted-color); }
+@media (max-width: 575.98px) { .admin-topbar .admin-user .who { display: none; } }
+
+.admin-content { flex: 1; padding: 24px; }
+@media (max-width: 575.98px) { .admin-content { padding: 16px; } .admin-topbar { padding: 12px 16px; } }
+
+.admin-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 24px;
+  font-size: 13px;
+  color: var(--muted-color);
+  border-top: 1px solid var(--border-color);
+}
+.admin-footer strong { color: var(--heading-color); }
+
+/* En-tête de page */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.page-head h1 { font-size: 24px; margin: 0 0 4px; }
+.page-head .breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.page-head .breadcrumb li + li::before { content: "/"; margin-right: 8px; color: color-mix(in srgb, var(--default-color), transparent 50%); }
+.page-head .breadcrumb a { color: color-mix(in srgb, var(--default-color), transparent 20%); }
+.page-head .breadcrumb a:hover { color: var(--accent-color); }
+.page-head .head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/*--------------------------------------------------------------
+# Composants
+--------------------------------------------------------------*/
+.sw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  transition: all 0.15s ease;
+}
+.btn-accent { background-color: var(--accent-color); border-color: var(--accent-color); color: var(--contrast-color); }
+.btn-accent:hover { background-color: var(--accent-dark); border-color: var(--accent-dark); color: var(--contrast-color); }
+.btn-soft { background-color: var(--surface-color); border-color: var(--border-color); color: var(--heading-color); }
+.btn-soft:hover { border-color: var(--accent-color); color: var(--accent-color); }
+
+.sw-link { color: var(--accent-color); font-size: 13px; }
+.sw-link:hover { text-decoration: underline; }
+
+.panel {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.panel-head h2 { font-size: 16px; margin: 0; }
+.panel-body { padding: 20px; }
+
+/* Cartes indicateurs */
+.kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  padding: 20px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+a.kpi-card:hover { border-color: color-mix(in srgb, var(--tone), transparent 50%); }
+.kpi-card .kpi-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--tone);
+  background-color: color-mix(in srgb, var(--tone), transparent 88%);
+}
+.kpi-card .kpi-label { font-size: 13px; margin-bottom: 2px; }
+.kpi-card .kpi-value { font-family: var(--heading-font); font-size: 24px; font-weight: 700; color: var(--heading-color); line-height: 1.2; }
+.kpi-card .kpi-trend { font-size: 12px; font-weight: 500; }
+.kpi-card .kpi-skeleton { display: block; width: 48px; height: 26px; border-radius: 6px; background-color: color-mix(in srgb, var(--default-color), transparent 90%); animation: sw-pulse 1.4s ease-in-out infinite; }
+@keyframes sw-pulse { 50% { opacity: 0.5; } }
+.tone-accent { --tone: var(--accent-color); }
+.tone-info { --tone: var(--info-color); }
+.tone-warning { --tone: var(--warning-color); }
+.tone-danger { --tone: var(--danger-color); }
+.tone-success { --tone: var(--success-color); }
+.tone-muted { --tone: var(--default-color); }
+
+/* Tableaux */
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table thead th {
+  font-family: var(--nav-font);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--default-color), transparent 20%);
+  background-color: color-mix(in srgb, var(--default-color), transparent 96%);
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 16px;
+  white-space: nowrap;
+}
+.admin-table td { padding: 12px 16px; vertical-align: middle; color: var(--default-color); border-bottom: 1px solid var(--border-color); }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover td { background-color: color-mix(in srgb, var(--accent-color), transparent 97%); }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-table .empty-row td { text-align: center; padding: 40px 16px; color: var(--muted-color); }
+.admin-table td strong { color: var(--heading-color); font-weight: 500; }
+
+/* Pastilles de statut */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--tone, var(--default-color));
+  background-color: color-mix(in srgb, var(--tone, var(--default-color)), transparent 88%);
+}
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+
+/* Graphique des ventes */
+.sales-chart { display: flex; align-items: flex-end; gap: 10px; height: 240px; padding-top: 24px; }
+.sales-chart .col-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+.sales-chart .col-bar .fill {
+  position: relative;
+  width: 100%;
+  max-width: 40px;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background-color: color-mix(in srgb, var(--accent-color), transparent 70%);
+  transition: background-color 0.2s ease;
+}
+.sales-chart .col-bar:last-child .fill, .sales-chart .col-bar:hover .fill { background-color: var(--accent-color); }
+.sales-chart .col-bar .fill .tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--heading-color);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.sales-chart .col-bar:hover .fill .tip, .sales-chart .col-bar:last-child .fill .tip { opacity: 1; }
+.sales-chart .col-bar small { font-size: 12px; color: var(--muted-color); }
+
+/* Listes compactes */
+.mini-list { list-style: none; margin: 0; padding: 0; }
+.mini-list li { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border-color); }
+.mini-list li:last-child { border-bottom: none; }
+.mini-list .grow { flex: 1; min-width: 0; }
+.mini-list .grow strong { display: block; color: var(--heading-color); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-list .grow small { color: var(--muted-color); }
+.mini-list .empty { justify-content: center; color: var(--muted-color); padding: 32px 20px; }
+
+.move-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tone);
+  background-color: color-mix(in srgb, var(--tone), transparent 88%);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent-color);
+  background-color: color-mix(in srgb, var(--accent-color), transparent 86%);
+}
+
+.page-head .page-desc { margin: 6px 0 0; font-size: 13px; max-width: 640px; }
+
+/* Cellule produit et actions de ligne */
+.prod-cell { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.prod-cell img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); flex-shrink: 0; }
+.prod-cell strong { display: block; color: var(--heading-color); font-weight: 500; }
+.prod-cell small, .admin-table td small { color: var(--muted-color); font-size: 12px; }
+
+.row-actions { display: inline-flex; gap: 4px; }
+.row-actions button, .row-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--default-color);
+}
+.row-actions button:hover, .row-actions a:hover { background-color: color-mix(in srgb, var(--default-color), transparent 92%); color: var(--accent-color); }
+.row-actions button.danger:hover { color: var(--danger-color); background-color: color-mix(in srgb, var(--danger-color), transparent 92%); }
+
+/* Sélecteur de quantité */
+.qty-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background-color: var(--surface-color); }
+.qty-stepper button { border: none; background: none; width: 30px; height: 30px; color: var(--default-color); }
+.qty-stepper button:hover { background-color: color-mix(in srgb, var(--accent-color), transparent 90%); color: var(--accent-color); }
+.sw-admin .qty-stepper input { width: 56px; border: none; border-radius: 0; text-align: center; font-size: 13px; color: var(--heading-color); -moz-appearance: textfield; }
+.qty-stepper input::-webkit-inner-spin-button, .qty-stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-stepper input:focus { outline: none; }
+
+/* Onglets de filtre */
+.order-tabs { display: flex; gap: 4px; padding: 12px 20px 0; border-bottom: 1px solid var(--border-color); flex-wrap: nowrap; overflow-x: auto; }
+.order-tabs .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--nav-font);
+  font-weight: 500;
+  color: var(--default-color);
+}
+.order-tabs .nav-link:hover { color: var(--accent-color); }
+.order-tabs .nav-link.active { color: var(--accent-color); border-bottom-color: var(--accent-color); }
+.order-tabs .tab-count {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  text-align: center;
+  background-color: color-mix(in srgb, var(--default-color), transparent 90%);
+}
+.order-tabs .nav-link.active .tab-count { background-color: var(--accent-color); color: #fff; }
+
+/* Messages */
+.sw-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--tone), black 25%);
+  background-color: color-mix(in srgb, var(--tone), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--tone), transparent 75%);
+}
+.sw-alert i { margin-top: 1px; }
+
+/*--------------------------------------------------------------
+# Pages existantes (Tailwind) : habillage ShopWise
+--------------------------------------------------------------*/
+/* Titres de page et cartes blanches */
+.admin-content h1.text-2xl, .admin-content h1.text-3xl { font-size: 24px; }
+.admin-content .bg-white.rounded-xl,
+.admin-content .bg-white.rounded-lg.shadow-sm,
+.admin-content .bg-white.rounded-2xl {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.admin-content .bg-white.rounded-xl.hover\:shadow-md:hover { border-color: color-mix(in srgb, var(--accent-color), transparent 60%); }
+/* Les fenêtres modales gardent leur ombre */
+.sw-admin .fixed .bg-white.rounded-xl, .sw-admin [role="dialog"] .bg-white { border: none; box-shadow: 0 20px 50px rgba(16, 36, 61, 0.25); }
+
+/* Tableaux Tailwind -> tableaux ShopWise */
+.admin-content table thead th {
+  font-family: var(--nav-font);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--default-color), transparent 20%);
+  white-space: nowrap;
+}
+.admin-content table thead { background-color: color-mix(in srgb, var(--default-color), transparent 96%); }
+.admin-content table tbody tr { border-color: var(--border-color); }
+.admin-content table tbody tr:hover { background-color: color-mix(in srgb, var(--accent-color), transparent 97%); }
+
+/* Gris « warm » -> ardoise ShopWise */
+.sw-admin .text-warm-900, .sw-admin .text-warm-800 { color: var(--heading-color); }
+.sw-admin .text-warm-700 { color: color-mix(in srgb, var(--heading-color), var(--default-color) 45%); }
+.sw-admin .text-warm-600, .sw-admin .text-warm-500 { color: var(--default-color); }
+.sw-admin .text-warm-400, .sw-admin .placeholder\:text-warm-400::placeholder { color: color-mix(in srgb, var(--default-color), transparent 40%); }
+.sw-admin .text-warm-300 { color: color-mix(in srgb, var(--default-color), transparent 55%); }
+.sw-admin .bg-warm-50, .sw-admin .hover\:bg-warm-50:hover { background-color: color-mix(in srgb, var(--default-color), transparent 96%); }
+.sw-admin .bg-warm-100, .sw-admin .hover\:bg-warm-100:hover, .sw-admin .disabled\:bg-warm-100:disabled { background-color: color-mix(in srgb, var(--default-color), transparent 92%); }
+.sw-admin .bg-warm-200 { background-color: color-mix(in srgb, var(--default-color), transparent 86%); }
+.sw-admin .bg-warm-800, .sw-admin .bg-warm-900 { background-color: var(--sidebar-bg); }
+.sw-admin .hover\:bg-warm-700:hover { background-color: color-mix(in srgb, var(--sidebar-bg), white 10%); }
+.sw-admin .border-warm-100, .sw-admin .border-warm-200, .sw-admin .divide-warm-100 > * + * { border-color: var(--border-color); }
+.sw-admin .border-warm-300 { border-color: color-mix(in srgb, var(--default-color), transparent 80%); }
+
+/* Ambre « prairie », orange « electro » et doré « terre » -> sarcelle ShopWise */
+.sw-admin .bg-cream-50 { background-color: transparent; }
+.sw-admin .hover\:text-prairie-600:hover { color: var(--accent-color); }
+.sw-admin .bg-prairie-500, .sw-admin .bg-prairie-600, .sw-admin .bg-electro-primary, .sw-admin .bg-terre-500,
+.sw-admin .checked\:bg-electro-primary:checked { background-color: var(--accent-color); }
+.sw-admin .hover\:bg-electro-secondary:hover, .sw-admin .hover\:bg-terre-600:hover { background-color: var(--accent-dark); }
+.sw-admin .bg-prairie-50, .sw-admin .hover\:bg-prairie-50:hover,
+.sw-admin .hover\:bg-electro-light:hover { background-color: color-mix(in srgb, var(--accent-color), transparent 92%); }
+.sw-admin .bg-prairie-100 { background-color: color-mix(in srgb, var(--accent-color), transparent 86%); }
+.sw-admin .text-prairie-600, .sw-admin .text-prairie-700, .sw-admin .text-electro-primary { color: var(--accent-color); }
+.sw-admin .border-prairie-600, .sw-admin .border-electro-primary,
+.sw-admin .hover\:border-prairie-500:hover, .sw-admin .focus\:border-prairie-500:focus,
+.sw-admin .focus\:border-electro-primary:focus, .sw-admin .checked\:border-electro-primary:checked { border-color: var(--accent-color); }
+.sw-admin .focus\:ring-prairie-500:focus, .sw-admin .focus\:ring-electro-primary:focus,
+.sw-admin .focus-visible\:ring-electro-primary:focus-visible, .sw-admin .focus-visible\:ring-terre-400:focus-visible {
+  --tw-ring-color: color-mix(in srgb, var(--accent-color), transparent 70%);
+}
+.sw-admin .accent-prairie-600 { accent-color: var(--accent-color); }
+
+/* Boutons et champs des composants partagés : rendu plus sobre, comme ShopWise */
+.admin-content button.shadow-md { box-shadow: none; }
+.admin-content button.enabled\:hover\:-translate-y-0\.5:hover { transform: none; }
+.sw-admin input:not([type="checkbox"]):not([type="radio"]), .sw-admin select, .sw-admin textarea { border-radius: 8px; }

@@ -28,8 +28,8 @@ export interface PaymentMethodInfo {
   automatic: boolean;
 }
 
-export function paymentAccountName(): string {
-  return process.env.PAYMENT_ACCOUNT_NAME?.trim() || process.env.PLATFORM_NAME?.trim() || 'All';
+function paymentAccountName(): string {
+  return process.env.PAYMENT_ACCOUNT_NAME?.trim() || process.env.PLATFORM_NAME?.trim() || 'Tsena Pro';
 }
 
 // Seuls les moyens dont le numéro marchand est configuré sont proposés

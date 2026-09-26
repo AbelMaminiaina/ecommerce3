@@ -3,7 +3,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { modalBackdrop, modalContent } from '@/lib/animations';
 
@@ -94,7 +93,7 @@ export function Modal({
                     className="p-2 rounded-full hover:bg-warm-100 transition-colors -mr-2"
                     aria-label="Fermer"
                   >
-                    <X className="h-5 w-5 text-warm-500" />
+                    <i className="bi bi-x-lg text-warm-500 text-[20px] leading-none" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -107,5 +106,3 @@ export function Modal({
     document.body
   );
 }
-
-export default Modal;

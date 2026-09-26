@@ -1,28 +1,16 @@
 import { MetadataRoute } from 'next';
-import { SERVER_API_BASE_URL } from '@/lib/api/config';
+import { fetchProductsOnServer } from '@/lib/api/products';
+import { SITE_URL } from '@/lib/site';
 
-interface Product {
-  slug: string;
-  updatedAt: string;
-}
-
-async function getProducts(): Promise<Product[]> {
-  try {
-    const res = await fetch(`${SERVER_API_BASE_URL}/products`, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-    if (!res.ok) {
-      return [];
-    }
-    const data = await res.json();
-    return data.products || [];
-  } catch {
-    return [];
-  }
+// Le plan du site n'a besoin que du slug et de la date de mise à jour ; rafraîchi toutes les heures
+async function getProducts() {
+  return fetchProductsOnServer<{ slug: string; updatedAt: string }>('', { cache: undefined, next: { revalidate: 3600 } }).catch(
+    () => []
+  );
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://all.mg';
+  const baseUrl = SITE_URL;
 
   // Pages statiques
   const staticPages: MetadataRoute.Sitemap = [

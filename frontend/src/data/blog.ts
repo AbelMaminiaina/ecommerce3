@@ -1,174 +1,146 @@
-import { BlogPost, Author } from '@/types';
+import { BlogPost } from '@/types';
 
-const authors: Record<string, Author> = {
-  equipe: {
-    name: 'Équipe All',
-    avatar: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150"%3E%3Crect width="150" height="150" fill="%235b9a2d"/%3E%3C/svg%3E',
-    bio: 'L\'équipe qui fait tourner la plateforme All au quotidien.',
-  },
-};
-
+// Articles du blog, repris du template ShopWise (assets/js/blog.js).
 export const blogPosts: BlogPost[] = [
   {
     id: '1',
-    title: 'Comment fonctionne la tarification dégressive sur All',
-    slug: 'comment-fonctionne-la-tarification-degressive',
-    excerpt: 'Sur All, le prix d\'un produit dépend de la quantité commandée. Voici comment lire et utiliser les paliers de prix pour optimiser vos achats.',
-    content: `# Comment fonctionne la tarification dégressive sur All
+    title: 'Bien choisir son sac en cuir : le guide complet',
+    slug: 'choisir-un-sac-en-cuir',
+    excerpt: 'Pleine fleur, tannage végétal, coutures… Les critères qui font la différence entre un sac qui dure deux saisons et un sac qui vous accompagne dix ans.',
+    content: `Un beau sac en cuir est un investissement. Pour qu'il vous accompagne longtemps, quelques critères simples permettent de repérer la qualité avant l'achat.
 
-La vente en gros repose sur un principe simple : plus vous commandez, moins vous payez à l'unité. Sur All, ce principe est appliqué produit par produit, avec des paliers de prix transparents.
+## 1. Le type de cuir
 
-## 1. Le prix de base
+Le cuir pleine fleur conserve la surface naturelle de la peau : il est le plus résistant et se patine joliment. Le cuir « fleur corrigée » est poncé puis recouvert d'un film, plus uniforme mais moins durable.
 
-Chaque produit a un prix de base, appliqué jusqu'à un certain seuil de quantité. C'est le prix affiché par défaut sur la fiche produit.
+## 2. Le tannage
 
-## 2. Les paliers de prix
+- Tannage végétal : aspect naturel, belle patine, plus écologique
+- Tannage au chrome : plus souple et plus rapide, mais moins noble
+- Demandez toujours l'origine du cuir et du tannage
 
-Au-delà de certains seuils de quantité, un prix unitaire réduit s'applique automatiquement. Par exemple, un carton d'emballage peut être vendu :
-- 1 200 Ar l'unité jusqu'à 99 unités
-- 1 050 Ar à partir de 100 unités
-- 900 Ar à partir de 500 unités
+## 3. Les finitions
 
-Ces paliers sont affichés directement sur la fiche produit, avant même d'ajouter au panier.
+Observez les coutures (régulières et serrées), les bords (peints ou cirés, jamais effilochés) et la quincaillerie : un zip métallique et des anneaux en laiton vieillissent bien mieux que le plastique.
 
-## 3. Le calcul au moment de la commande
+> Un bon sac se reconnaît autant à ses finitions intérieures qu'à son extérieur.
 
-Le prix appliqué est toujours recalculé automatiquement en fonction de la quantité finale de votre commande, pour garantir que vous bénéficiez du bon tarif.
+## 4. L'entretien
 
-## 4. La quantité minimum de commande (MOQ)
-
-Chaque produit a également une quantité minimum de commande (MOQ), en dessous de laquelle il n'est pas possible de commander. Elle est indiquée à côté du prix.
-
-Ces deux mécanismes — MOQ et paliers de prix — sont propres à la vente en gros et permettent à All de proposer des prix compétitifs pour les professionnels.`,
-    coverImage: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=1200',
+Dépoussiérez-le régulièrement avec un chiffon doux, nourrissez le cuir tous les six mois et rangez-le rembourré, dans sa housse en coton.`,
+    coverImage: '/shopwise/img/blog/product-details-3.webp',
     category: 'conseils',
-    publishedAt: '2026-02-10',
-    author: authors.equipe,
-    tags: ['tarifs', 'paliers de prix', 'commande'],
-    readingTime: 3,
+    publishedAt: '2026-09-12',
+    author: { name: 'Camille Laurent', role: 'Acheteuse maroquinerie', avatar: '' },
+    tags: ['cuir', 'maroquinerie', 'guide'],
+    readingTime: 5,
   },
   {
     id: '2',
-    title: 'Payer par Mobile Money : mode d\'emploi',
-    slug: 'payer-par-mobile-money-mode-d-emploi',
-    excerpt: 'MVola, Orange Money ou Airtel Money : voici comment régler votre commande sur All, avec ou sans compte.',
-    content: `# Payer par Mobile Money : mode d'emploi
+    title: 'Les tendances mode de l\'automne 2026',
+    slug: 'tendances-automne-2026',
+    excerpt: 'Tons terre, matières douces et silhouettes structurées : tour d\'horizon des pièces qui vont compter cette saison.',
+    content: `Cet automne, la mode mise sur la simplicité et la qualité : des pièces faciles à associer, pensées pour durer.
 
-Sur All, le paiement se fait en ligne, par Mobile Money, au moment de la commande. C'est le même pour les particuliers, les entreprises et les visiteurs sans compte.
+## Les couleurs de la saison
 
-## Étape 1 — Choisir votre opérateur
+- Camel et cognac, en total look ou par touches
+- Vert olive et kaki pour les vestes
+- Bordeaux profond en accessoire
 
-À la dernière étape de la commande, sélectionnez MVola, Orange Money ou Airtel Money. Le paiement par carte bancaire n'est pas encore disponible.
+## Les pièces clés
 
-## Étape 2 — Envoyer le montant
+La veste structurée en laine, le pull en maille épaisse et la botte en cuir lisse forment le trio de base. On les associe à un sac de taille moyenne, porté à l'épaule.
 
-Une fois la commande validée, nous vous indiquons le montant exact et le numéro à créditer. Ces informations vous sont aussi envoyées par e-mail.
+> Investir dans quelques belles pièces plutôt que dans beaucoup de pièces moyennes.
 
-## Étape 3 — Saisir la référence
-
-Après l'envoi, saisissez la référence de la transaction (reçue par SMS) et le numéro depuis lequel vous avez payé.
-
-## Étape 4 — Vérification
-
-Notre équipe vérifie le paiement et vous prévient par e-mail. Votre commande est alors traitée. Si un paiement ne peut pas être validé, le motif vous est indiqué et vous pouvez saisir une nouvelle référence.
-
-## Un panier avec plusieurs vendeurs ?
-
-Un seul paiement couvre toutes les commandes du panier : chaque vendeur prépare ensuite sa propre commande.`,
-    coverImage: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200',
-    category: 'conseils',
-    publishedAt: '2026-02-20',
-    author: authors.equipe,
-    tags: ['paiement', 'mobile money', 'mvola'],
-    readingTime: 3,
+Retrouvez notre sélection de la saison dans la collection automne de la boutique.`,
+    coverImage: '/shopwise/img/blog/product-m-8.webp',
+    category: 'tendances',
+    publishedAt: '2026-09-02',
+    author: { name: 'Inès Moreau', role: 'Styliste', avatar: '' },
+    tags: ['mode', 'automne', 'tendances'],
+    readingTime: 4,
   },
   {
     id: '3',
-    title: 'Créer votre compte professionnel : le guide en 4 étapes',
-    slug: 'creer-votre-compte-professionnel-guide',
-    excerpt: 'Avant d\'accéder au catalogue et aux tarifs de All, votre entreprise doit créer et faire valider un compte professionnel. Voici comment procéder.',
-    content: `# Créer votre compte professionnel : le guide en 4 étapes
+    title: 'Livraison et retours : tout ce qu\'il faut savoir',
+    slug: 'livraison-et-retours',
+    excerpt: 'Délais, frais, suivi de colis et retours gratuits sous 45 jours : les réponses aux questions que vous nous posez le plus souvent.',
+    content: `Chez ShopWise, nous voulons que chaque commande se passe simplement, de la validation du panier jusqu'à la réception.
 
-L'accès aux prix et à la commande sur All est réservé aux entreprises disposant d'un compte approuvé. Voici comment l'obtenir.
+## Les délais de livraison
 
-## Étape 1 — Renseignez votre entreprise
+- Standard : 2 à 4 jours ouvrés (4,99 €)
+- Express : livraison le lendemain avant 13 h (11,99 €)
+- Gratuite dès 75 € d'achat
 
-Depuis la page "Devenir client professionnel", indiquez la raison sociale, le numéro fiscal (NIF) et les coordonnées de contact de votre entreprise.
+## Suivre votre colis
 
-## Étape 2 — Créez votre compte utilisateur
+Dès l'expédition, vous recevez un e-mail avec votre numéro de suivi. Vous pouvez aussi suivre votre commande depuis votre compte.
 
-Renseignez votre nom, votre email professionnel et un mot de passe. Ce compte sera celui du premier administrateur de l'entreprise sur la plateforme.
+## Retourner un article
 
-## Étape 3 — Validation par notre équipe
-
-Votre dossier est examiné sous 1 à 2 jours ouvrés. Nous vérifions les informations transmises avant d'approuver le compte.
-
-## Étape 4 — Confirmation de votre compte
-
-Une fois approuvé, vous recevez un e-mail de confirmation. Vous pouvez alors vous connecter, consulter les tarifs et passer commande.
-
-## Et après ?
-
-Votre statut de compte (en attente, approuvé) est visible à tout moment dans le menu de votre compte, en haut du site.`,
-    coverImage: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200',
-    category: 'conseils',
-    publishedAt: '2026-03-01',
-    author: authors.equipe,
-    tags: ['inscription', 'compte professionnel', 'onboarding'],
-    readingTime: 2,
+Vous disposez de 45 jours pour retourner un article non porté, dans son emballage d'origine. Le retour est gratuit et le remboursement intervient sous 5 jours après réception.`,
+    coverImage: '/shopwise/img/blog/product-showcase-2.webp',
+    category: 'guides',
+    publishedAt: '2026-08-20',
+    author: { name: 'Équipe ShopWise', role: 'Service client', avatar: '' },
+    tags: ['livraison', 'retours', 'service client'],
+    readingTime: 3,
   },
   {
     id: '4',
-    title: '5 bonnes pratiques pour optimiser vos commandes en gros',
-    slug: '5-bonnes-pratiques-commandes-en-gros',
-    excerpt: 'Quelques réflexes simples pour tirer le meilleur parti des tarifs dégressifs sur All.',
-    content: `# 5 bonnes pratiques pour optimiser vos commandes en gros
+    title: '5 astuces pour garder vos baskets comme neuves',
+    slug: 'entretenir-ses-baskets',
+    excerpt: 'Toile, cuir ou daim : des gestes simples pour prolonger la vie de vos sneakers préférées.',
+    content: `Des baskets bien entretenues durent deux fois plus longtemps. Voici nos cinq réflexes.
 
-Voici quelques conseils pour optimiser vos achats professionnels sur All.
+## Nos 5 astuces
 
-## 1. Groupez vos commandes pour atteindre les paliers de prix
+- Imperméabilisez-les dès l'achat
+- Brossez les semelles après chaque sortie sous la pluie
+- Lavez les lacets à part, à la main
+- Laissez-les sécher loin d'une source de chaleur
+- Alternez deux paires pour laisser la mousse reprendre sa forme
 
-Regarder les paliers de prix d'un produit avant de commander permet parfois d'ajuster légèrement la quantité pour bénéficier d'un tarif unitaire plus avantageux.
+> Le daim ne se mouille jamais : on le brosse à sec, toujours dans le même sens.
 
-## 2. Anticipez la quantité minimum de commande
-
-Vérifiez le MOQ de chaque produit avant de planifier votre commande, surtout si vous combinez plusieurs références dans un même panier.
-
-## 3. Réglez rapidement par Mobile Money
-
-Votre commande n'est traitée qu'une fois le paiement vérifié : saisissez la référence de la transaction dès l'envoi pour accélérer la préparation.
-
-## 4. Choisissez le bon mode de livraison
-
-Le retrait sur place est gratuit ; la livraison standard ou express a un coût qui dépend du sous-total de votre commande. Comparez selon vos délais.
-
-## 5. Centralisez les commandes de votre équipe
-
-Si plusieurs personnes de votre entreprise commandent sur All, privilégiez un compte entreprise unique pour garder une vue d'ensemble sur les commandes et les paiements.`,
-    coverImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200',
+Pour le cuir, un lait nourrissant appliqué une fois par mois suffit à éviter les craquelures.`,
+    coverImage: '/shopwise/img/blog/product-11.webp',
     category: 'conseils',
-    publishedAt: '2026-03-15',
-    author: authors.equipe,
-    tags: ['bonnes pratiques', 'achats', 'gestion'],
+    publishedAt: '2026-08-05',
+    author: { name: 'Thomas Girard', role: 'Responsable chaussures', avatar: '' },
+    tags: ['chaussures', 'entretien', 'astuces'],
     readingTime: 3,
+  },
+  {
+    id: '5',
+    title: 'Notre démarche responsable en 2026',
+    slug: 'notre-demarche-responsable',
+    excerpt: 'Emballages recyclés, transport optimisé, programme de reprise : où en sont nos engagements et ce qui change cette année.',
+    content: `Depuis nos débuts, nous essayons de réduire l'impact de chaque commande. Voici où nous en sommes.
+
+## Ce que nous avons fait
+
+- 100 % de nos colis en carton recyclé et sans plastique
+- Regroupement des expéditions pour limiter les trajets
+- Sélection prioritaire de marques certifiées
+
+## Ce qui arrive cette année
+
+Nous lançons un programme de reprise : rapportez un article usé de la boutique, nous le faisons réparer ou recycler et vous recevez un bon d'achat.
+
+> Le produit le plus durable est celui que l'on garde longtemps.`,
+    coverImage: '/shopwise/img/blog/about-wide-3.webp',
+    category: 'actualites',
+    publishedAt: '2026-07-18',
+    author: { name: 'Équipe ShopWise', role: 'Direction', avatar: '' },
+    tags: ['engagements', 'environnement', 'actualités'],
+    readingTime: 4,
   },
 ];
 
-export function getRecentPosts(limit = 3): BlogPost[] {
-  return blogPosts
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, limit);
-}
-
 export function getBlogPostBySlug(slug: string): BlogPost | undefined {
   return blogPosts.find((p) => p.slug === slug);
-}
-
-export function getPostsByCategory(category: string): BlogPost[] {
-  if (category === 'all') return blogPosts;
-  return blogPosts.filter((p) => p.category === category);
-}
-
-export function getRelatedPosts(postId: string, limit = 3): BlogPost[] {
-  return blogPosts.filter((p) => p.id !== postId).slice(0, limit);
 }

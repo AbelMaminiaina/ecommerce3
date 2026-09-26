@@ -1,13 +1,13 @@
 ﻿<#
 .SYNOPSIS
-    Deploie (ou met a jour) la demo "All" sur le VPS Contabo, par SSH, avec Docker.
+    Deploie (ou met a jour) la demo "Tsena Pro" sur le VPS Contabo, par SSH, avec Docker.
 
 .DESCRIPTION
-    - Se connecte en SSH, clone/met a jour le depot dans /opt/all, cree .env.demo au premier
-      lancement (secrets aleatoires), construit la pile Docker `all-demo`, attend qu'elle reponde
+    - Se connecte en SSH, clone/met a jour le depot dans /opt/tsena-pro, cree .env.demo au premier
+      lancement (secrets aleatoires), construit la pile Docker `tsena-pro`, attend qu'elle reponde
       et charge les donnees de demonstration (premier deploiement uniquement).
-    - N'utilise ni les ports 80/443 ni les conteneurs des autres sites du serveur : seul le port
-      -DemoPort (8081 par defaut) est utilise.
+    - N'utilise ni les ports 80/443 ni les conteneurs des autres sites du serveur (All : port 8081,
+      projet all-demo) : seul le port -DemoPort (8082 par defaut) est utilise.
     - HTTPS sans domaine : un tunnel Cloudflare gratuit donne une adresse https://xxxx.trycloudflare.com
       (affichee a la fin, retrouvable avec -Action url). -NoTunnel pour le desactiver.
     - Le code deploye est celui de GitHub (branche -Branch) : poussez (git push) avant de deployer.
@@ -31,10 +31,10 @@ param(
     [ValidateSet('deploy', 'status', 'logs', 'seed', 'stop', 'url')]
     [string]$Action = 'deploy',
     [string]$Branch = 'main',
-    [string]$RepoUrl = 'https://github.com/AbelMaminiaina/econEW.git',
-    [string]$RemoteDir = '/opt/all',
-    # Port public de la demo sur le serveur (ne doit pas etre utilise par un autre site)
-    [int]$DemoPort = 8081,
+    [string]$RepoUrl = 'https://github.com/AbelMaminiaina/ecommerce3.git',
+    [string]$RemoteDir = '/opt/tsena-pro',
+    # Port public de la demo sur le serveur (ne doit pas etre utilise par un autre site ; 8081 = All)
+    [int]$DemoPort = 8082,
     # Sans HTTPS : ne pas demarrer le tunnel Cloudflare (acces http://IP:port uniquement)
     [switch]$NoTunnel,
     # Ne pas demander de confirmation

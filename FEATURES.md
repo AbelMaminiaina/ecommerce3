@@ -1,4 +1,4 @@
-# Fonctionnalités - Ferme du Vardier
+# Fonctionnalités - Tsena Pro
 
 Ce document recense les fonctionnalités du site, organisées par domaine.
 
@@ -53,7 +53,7 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - Déploiement Docker (frontend, backend, PostgreSQL, Redis)
 - HTTPS via Let's Encrypt / Nginx
 - CI/CD via GitHub Actions (lint + tests + build)
-- `deploy.sh` : sauvegarde automatique et horodatée de `.env.production` avant chaque déploiement (`backups/env/`), commande `env-diff` pour ajouter une nouvelle variable sans écraser les secrets existants, et `env-restore` pour revenir à la dernière sauvegarde en cas d'erreur
+- `scripts/deploy-demo.ps1` : déploiement en une commande sur le VPS (voir [DEPLOY-DEMO.md](./DEPLOY-DEMO.md)) ; les secrets sont générés au premier déploiement et conservés ensuite
 
 ## Tests unitaires
 

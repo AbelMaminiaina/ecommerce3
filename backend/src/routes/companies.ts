@@ -1,21 +1,27 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import prisma from '../lib/prisma.js';
+import { sendValidationError, singleMessage } from '../lib/validation.js';
 import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
 import { sendCompanyApprovedEmail, sendCompanyRejectedEmail } from '../services/emailService.js';
 
 const router = Router();
 
+const listQuerySchema = z.object({ status: z.enum(['pending', 'approved', 'rejected', 'suspended']).optional() });
+const rejectSchema = z.object({ reason: z.string().trim().max(500).nullish() });
+
 // Admin: liste des entreprises (filtrable par statut, ex: ?status=pending pour la file d'attente)
 router.get('/', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
-    const { status } = req.query;
+    const { status } = listQuerySchema.parse(req.query, singleMessage('Statut invalide'));
     const companies = await prisma.company.findMany({
-      where: status ? { status: status as any } : undefined,
+      where: status ? { status } : undefined,
       include: { users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } } },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ companies, total: companies.length });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error fetching companies:', error);
     res.status(500).json({ error: 'Failed to fetch companies' });
   }
@@ -77,7 +83,7 @@ router.patch('/:id/approve', authenticate, requirePlatformAdmin, async (req: Req
 router.patch('/:id/reject', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason } = rejectSchema.parse(req.body ?? {}, singleMessage('Motif de refus invalide (500 caractères maximum)'));
 
     const existing = await prisma.company.findUnique({ where: { id } });
     if (!existing) {
@@ -97,6 +103,7 @@ router.patch('/:id/reject', authenticate, requirePlatformAdmin, async (req: Requ
 
     res.json({ success: true, company });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error rejecting company:', error);
     res.status(500).json({ error: 'Failed to reject company' });
   }

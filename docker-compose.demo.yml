@@ -1,8 +1,8 @@
-# Docker Compose — démo « All » sur un VPS qui héberge déjà un autre site.
+# Docker Compose — démo « Tsena Pro » sur le VPS Contabo, à côté des autres sites du serveur (All, Ferme du Vardier…).
 #
-# - Projet Compose dédié (`all-demo`) : conteneurs, volumes et réseau préfixés `all-demo-`,
-#   aucun conflit avec un autre projet Docker du serveur.
-# - Aucun port 80/443 utilisé : l'application est exposée sur DEMO_PORT (8081 par défaut),
+# - Projet Compose dédié (`tsena-pro`) : conteneurs, volumes et réseau préfixés `tsena-pro-`,
+#   aucun conflit avec un autre projet Docker du serveur (All utilise `all-demo`).
+# - Aucun port 80/443 utilisé : l'application est exposée sur DEMO_PORT (8082 par défaut ; 8081 est pris par All),
 #   l'éventuel nginx d'un autre site n'est pas touché.
 # - Postgres et Redis ne sont pas publiés sur l'hôte.
 # - HTTPS optionnel sans domaine : service `tunnel` (Cloudflare Tunnel, profil `tunnel`) qui donne une
@@ -10,20 +10,20 @@
 #   origine : API en /api, NextAuth déduit l'adresse des en-têtes X-Forwarded-*).
 #
 # Usage : docker compose -f docker-compose.demo.yml --env-file .env.demo up -d --build
-name: all-demo
+name: tsena-pro
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: all
+      POSTGRES_USER: tsenapro
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
-      POSTGRES_DB: all
+      POSTGRES_DB: tsenapro
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U all -d all"]
+      test: ["CMD-SHELL", "pg_isready -U tsenapro -d tsenapro"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,12 +48,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://all:${POSTGRES_PASSWORD}@postgres:5432/all?schema=public
+      DATABASE_URL: postgresql://tsenapro:${POSTGRES_PASSWORD}@postgres:5432/tsenapro?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       FRONTEND_URL: ${PUBLIC_URL:?PUBLIC_URL requis}
       # Signe les sessions : obligatoire (sans elle le backend utiliserait une valeur de dev publique)
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis}
-      PLATFORM_NAME: All
+      PLATFORM_NAME: Tsena Pro
       # Compte administrateur créé par le seed
       PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@example.com}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD requis}
@@ -61,7 +61,7 @@ services:
       PAYMENT_MVOLA_NUMBER: ${PAYMENT_MVOLA_NUMBER:-}
       PAYMENT_ORANGE_MONEY_NUMBER: ${PAYMENT_ORANGE_MONEY_NUMBER:-}
       PAYMENT_AIRTEL_MONEY_NUMBER: ${PAYMENT_AIRTEL_MONEY_NUMBER:-}
-      PAYMENT_ACCOUNT_NAME: ${PAYMENT_ACCOUNT_NAME:-All}
+      PAYMENT_ACCOUNT_NAME: ${PAYMENT_ACCOUNT_NAME:-Tsena Pro}
       # Paiement automatique MVola (Merchant Pay) : laisser vide = paiement manuel par référence uniquement.
       # Voir MVOLA-INTEGRATION.md (identifiants à demander à MVola, validation en bac à sable avant la production).
       MVOLA_CONSUMER_KEY: ${MVOLA_CONSUMER_KEY:-}
@@ -94,6 +94,9 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-savatry.milamina@gmail.com}
+    volumes:
+      # Photos des produits téléversées (à sauvegarder avec la base)
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,6 +113,8 @@ services:
         # API vue par le navigateur : chemin relatif (même origine que le site, via nginx). Fonctionne
         # aussi bien en http://IP:PORT que derrière le tunnel HTTPS, sans connaître l'adresse à l'avance.
         NEXT_PUBLIC_API_URL: /api
+        # Réécritures /api et /uploads de next.config.js, figées au build (next/image lit les photos par là)
+        BACKEND_URL: http://backend:3001
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -127,9 +132,9 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "${DEMO_PORT:-8081}:80"
+      - "${DEMO_PORT:-8082}:80"
     volumes:
-      - ./nginx/all-demo.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/tsena-pro.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
       - backend
@@ -147,3 +152,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:

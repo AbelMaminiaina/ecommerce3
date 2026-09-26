@@ -83,18 +83,6 @@ export interface CartItem {
   sellerName?: string | null;
 }
 
-// Types pour les témoignages
-export interface Testimonial {
-  id: string;
-  name: string;
-  location: string;
-  avatar?: string;
-  content: string;
-  rating: number;
-  date: string;
-  productPurchased?: string;
-}
-
 // Types pour les services
 export interface Service {
   id: string;
@@ -124,28 +112,13 @@ export interface BlogPost {
   readingTime: number;
 }
 
-export type BlogCategory = 'conseils' | 'produits' | 'actualites' | 'evenements';
+export type BlogCategory = 'conseils' | 'tendances' | 'guides' | 'actualites';
 
 export interface Author {
   name: string;
   avatar: string;
+  role?: string;
   bio?: string;
-}
-
-// Types pour le formulaire de contact
-export interface ContactFormData {
-  name: string;
-  email: string;
-  phone?: string;
-  subject: string;
-  message: string;
-  consent: boolean;
-}
-
-// Types pour la newsletter
-export interface NewsletterFormData {
-  email: string;
-  consent: boolean;
 }
 
 // Types pour les commandes B2B
@@ -168,6 +141,8 @@ export interface OrderAddress {
 
 export interface OrderItemSummary {
   name: string;
+  slug?: string;
+  image?: string | null;
   quantity: number;
   price: number;
   availableFrom?: string | null;
@@ -204,14 +179,6 @@ export interface Company {
   contactPhone?: string | null;
   rejectionReason?: string | null;
   createdAt?: string;
-}
-
-// Types pour les valeurs de la ferme
-export interface Value {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
 }
 
 // Types pour la FAQ

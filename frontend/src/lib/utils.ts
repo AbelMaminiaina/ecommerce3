@@ -72,7 +72,7 @@ const ELECTRONICS_FALLBACKS = [3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
   (n) => `/electro/img/product-${n}.png`
 );
 
-// Image d'un produit : sa photo, sinon un visuel Electro choisi de façon stable à partir de l'id.
+// Image d'un produit : sa photo, sinon un visuel de public/electro/img choisi de façon stable à partir de l'id.
 export function getProductImage(
   product: { id: string; category: string; images: string[] },
   index = 0

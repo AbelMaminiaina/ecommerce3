@@ -24,7 +24,7 @@ const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
 process.env.PAYMENT_MVOLA_NUMBER = '034 00 000 00';
 process.env.PAYMENT_ORANGE_MONEY_NUMBER = '032 00 000 00';
 delete process.env.PAYMENT_AIRTEL_MONEY_NUMBER;
-process.env.PAYMENT_ACCOUNT_NAME = 'All';
+process.env.PAYMENT_ACCOUNT_NAME = 'Tsena Pro';
 
 const adminAuth = { Authorization: `Bearer ${signToken({ userId: 'admin1', role: 'platform_admin', companyId: null })}` };
 const buyerAuth = { Authorization: `Bearer ${signToken({ userId: 'buyer1', role: 'buyer', companyId: 'c1' })}` };
@@ -82,8 +82,8 @@ describe('GET /api/payments/methods', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.methods).toEqual([
-      { id: 'mvola', label: 'MVola', number: '034 00 000 00', accountName: 'All', automatic: false },
-      { id: 'orange_money', label: 'Orange Money', number: '032 00 000 00', accountName: 'All', automatic: false },
+      { id: 'mvola', label: 'MVola', number: '034 00 000 00', accountName: 'Tsena Pro', automatic: false },
+      { id: 'orange_money', label: 'Orange Money', number: '032 00 000 00', accountName: 'Tsena Pro', automatic: false },
     ]);
   });
 });

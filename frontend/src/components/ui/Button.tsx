@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -69,7 +68,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <i className="bi bi-arrow-repeat animate-spin text-[16px] inline-block leading-none" aria-hidden="true" />
         )}
         {!loading && icon && iconPosition === 'left' && (
           <span className="shrink-0">{icon}</span>
@@ -84,5 +83,3 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
-
-export default Button;

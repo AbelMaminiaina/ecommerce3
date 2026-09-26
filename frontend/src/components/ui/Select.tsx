@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
@@ -76,7 +75,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ))}
           </select>
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-warm-400">
-            <ChevronDown className="h-5 w-5" />
+            <i className="bi bi-chevron-down text-[20px] leading-none" aria-hidden="true" />
           </div>
         </div>
         {error && (
@@ -91,5 +90,3 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = 'Select';
-
-export default Select;

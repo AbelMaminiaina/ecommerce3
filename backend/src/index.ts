@@ -16,6 +16,8 @@ import { startAutoPaymentReconcileJob } from './services/mobileMoneyPayments.js'
 import { setupDemoPayments } from './services/demoPayments.js';
 import { startOrderExpiryJob } from './services/orderExpiry.js';
 import adminProductsRouter from './routes/adminProducts.js';
+import uploadsRouter from './routes/uploads.js';
+import { UPLOAD_DIR, UPLOADS_URL_PREFIX } from './lib/uploads.js';
 import { connectRedis, redis, isRedisAvailable } from './lib/redis.js';
 import { authenticate, requirePlatformAdmin } from './middleware/auth.js';
 
@@ -30,8 +32,15 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Les images arrivent en fichiers (POST /api/uploads), plus en JSON : les corps JSON restent petits
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
+
+// Images téléversées : noms uniques jamais réécrits => cache navigateur / Cloudflare d'un an
+app.use(
+  UPLOADS_URL_PREFIX,
+  express.static(UPLOAD_DIR, { immutable: true, maxAge: '365d', index: false, fallthrough: false })
+);
 
 // Routes
 app.use('/api/products', productsRouter);
@@ -47,6 +56,7 @@ app.use('/api/payments/auto', autoPaymentsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/payouts', payoutsRouter);
 app.use('/api/admin/products', adminProductsRouter);
+app.use('/api/uploads', uploadsRouter);
 
 // Health check with Redis status
 app.get('/api/health', async (_req, res) => {

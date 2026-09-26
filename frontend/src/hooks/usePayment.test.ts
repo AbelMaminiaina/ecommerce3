@@ -25,7 +25,7 @@ const summary = (overrides: Partial<any> = {}) => ({
   method: 'mvola',
   methodLabel: 'MVola',
   number: '034 00 000 00',
-  accountName: 'All',
+  accountName: 'Tsena Pro',
   totalAmount: 5_200_000,
   reference: null,
   payerPhone: null,

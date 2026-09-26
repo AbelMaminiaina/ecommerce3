@@ -1,11 +1,11 @@
-# Robots.txt - All
-# https://all.mg
+# Robots.txt - Tsena Pro
+# https://tsenapro.mg
 
 User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://all.mg/sitemap.xml
+Sitemap: https://tsenapro.mg/sitemap.xml
 
 # Disallow admin and private pages
 Disallow: /admin/

@@ -4,15 +4,13 @@ import { randomBytes } from 'node:crypto';
 import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { MIN_WHOLESALE_QTY } from '../lib/wholesale.js';
+import { IMAGE_URL_PATTERN, deleteReplacedImages, deleteUploadedImages } from '../lib/uploads.js';
 import { authenticate, requireApprovedCompany } from '../middleware/auth.js';
 
 // Espace vendeur : une entreprise approuvée publie et gère ses propres produits.
 // Toute création ou modification de contenu repasse par la validation de l'administrateur.
 const router = Router();
 router.use(authenticate, requireApprovedCompany);
-
-// Images : data URI (png/jpeg/webp, pas de SVG qui est exécutable), chemin du site ou URL https
-const IMAGE_PATTERN = /^(data:image\/(png|jpe?g|webp);base64,|https:\/\/|\/)/;
 
 const tierSchema = z.object({
   minQty: z.number().int().positive(),
@@ -27,8 +25,9 @@ const productSchema = z
     category: z.string().trim().min(1, 'Catégorie requise'),
     price: z.number().int().positive('Le prix doit être positif'),
     originalPrice: z.number().int().positive().nullable().optional(),
+    // URL uniquement : fichier envoyé via POST /api/uploads, chemin du site ou https (ni data URI ni SVG)
     images: z
-      .array(z.string().max(700_000).regex(IMAGE_PATTERN, "Format d'image non supporté"))
+      .array(z.string().max(2048).regex(IMAGE_URL_PATTERN, "Format d'image non supporté"))
       .max(5, '5 images maximum'),
     characteristics: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
     moq: z
@@ -173,6 +172,7 @@ router.put('/products/:id', async (req: Request, res: Response) => {
       });
     });
 
+    await deleteReplacedImages(existing.images, product.images);
     await invalidateProductCache();
     res.json({ success: true, product: formatProduct(product) });
   } catch (error) {
@@ -243,6 +243,7 @@ router.delete('/products/:id', async (req: Request, res: Response) => {
     }
 
     await prisma.product.delete({ where: { id: existing.id } });
+    await deleteUploadedImages(existing.images);
     await invalidateProductCache();
     res.json({ success: true, message: 'Produit supprimé' });
   } catch (error) {

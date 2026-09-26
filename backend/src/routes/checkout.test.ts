@@ -30,7 +30,7 @@ import { SHIPPING_COSTS, FREE_SHIPPING_THRESHOLD } from '../lib/shipping.js';
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
 
 process.env.PAYMENT_MVOLA_NUMBER = '034 00 000 00';
-process.env.PAYMENT_ACCOUNT_NAME = 'All';
+process.env.PAYMENT_ACCOUNT_NAME = 'Tsena Pro';
 
 const adminToken = signToken({ userId: 'admin1', role: 'platform_admin', companyId: null });
 const buyerToken = signToken({ userId: 'buyer1', role: 'buyer', companyId: 'c1' });
@@ -211,7 +211,7 @@ describe('POST /api/checkout', () => {
       method: 'mvola',
       label: 'MVola',
       number: '034 00 000 00',
-      accountName: 'All',
+      accountName: 'Tsena Pro',
       totalAmount: 35000 + SHIPPING_COSTS.standard,
       expiresAt: expect.any(String),
     });

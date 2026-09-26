@@ -1,6 +1,6 @@
-# Ferme du Vardier
+# Tsena Pro
 
-Site e-commerce pour la Ferme du Vardier - Ferme avicole biologique à Madagascar.
+Plateforme de vente en gros (B2B) multi-vendeurs pour les professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money.
 
 ## Technologies
 
@@ -32,8 +32,8 @@ Site e-commerce pour la Ferme du Vardier - Ferme avicole biologique à Madagasca
 
 ```bash
 # Cloner le repository
-git clone https://github.com/AbelMaminiaina/FermeDuVerdier.git
-cd FermeDuVerdier
+git clone https://github.com/AbelMaminiaina/ecommerce3.git
+cd ecommerce3
 
 # Lancer les services Docker (PostgreSQL, Redis, pgAdmin)
 docker-compose up -d
@@ -60,8 +60,11 @@ npm run dev
 
 ## Structure du projet
 
+> Les règles d'architecture à jour (dossiers, accès à l'API, validation, styles) sont dans
+> [ARCHITECTURE.md](./ARCHITECTURE.md). L'arborescence ci-dessous est historique.
+
 ```
-FermeDuVardier/
+ecommerce3/
 ├── frontend/          # Application Next.js
 │   ├── src/
 │   │   ├── app/       # Pages (App Router)
@@ -78,6 +81,11 @@ FermeDuVardier/
 ├── docker/            # Scripts d'initialisation Docker
 └── docker-compose.yml # Configuration Docker
 ```
+
+## Déploiement
+
+Mise en ligne sur le VPS Contabo (à côté des autres sites du serveur, accès par IP et lien HTTPS Cloudflare) :
+voir [DEPLOY-DEMO.md](./DEPLOY-DEMO.md). En une commande depuis Windows : `.\scripts\deploy-demo.ps1 -Server IP_DU_VPS`.
 
 ## Scripts
 
@@ -103,7 +111,7 @@ npm run db:studio  # Prisma Studio
 
 ### Backend (.env)
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5434/fermeduvardier"
+DATABASE_URL="postgresql://user:password@localhost:5434/tsenapro"
 REDIS_URL="redis://:password@localhost:6380"
 PORT=3001
 FRONTEND_URL=http://localhost:3000
@@ -148,4 +156,4 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
 ## Licence
 
-Propriétaire - Ferme du Vardier
+Propriétaire - Tsena Pro

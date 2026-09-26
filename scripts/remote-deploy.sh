@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Execute SUR LE SERVEUR par scripts/deploy-demo.ps1 (envoye par SSH sur l'entree standard).
-# Deploiement de la demo "All" : projet Docker dedie (all-demo), port dedie, aucun impact sur les
-# autres sites du serveur. Fichier volontairement ASCII (transite par stdin depuis PowerShell).
+# Deploiement de la demo "Tsena Pro" : projet Docker dedie (tsena-pro), port dedie, aucun impact sur les
+# autres sites du serveur (All : projet all-demo, port 8081). Fichier volontairement ASCII (transite par stdin depuis PowerShell).
 #
 # Usage : bash -s -- <deploy|status|logs|seed|stop|url>
 # Variables d'environnement lues : APP_DIR REPO_URL BRANCH DEMO_PORT SERVER_HOST TUNNEL
@@ -11,12 +11,12 @@ set -euo pipefail
 
 ACTION="${1:-deploy}"
 TUNNEL="${TUNNEL:-1}"
-APP_DIR="${APP_DIR:-/opt/all}"
-REPO_URL="${REPO_URL:-https://github.com/AbelMaminiaina/econEW.git}"
+APP_DIR="${APP_DIR:-/opt/tsena-pro}"
+REPO_URL="${REPO_URL:-https://github.com/AbelMaminiaina/ecommerce3.git}"
 BRANCH="${BRANCH:-main}"
-DEMO_PORT="${DEMO_PORT:-8081}"
+DEMO_PORT="${DEMO_PORT:-8082}"
 SERVER_HOST="${SERVER_HOST:-}"
-PROJECT="all-demo"
+PROJECT="tsena-pro"
 
 say()  { printf '\n==> %s\n' "$*"; }
 fail() { printf '\nERREUR: %s\n' "$*" >&2; exit 1; }
@@ -112,7 +112,7 @@ PLATFORM_ADMIN_PASSWORD=${ADMIN_PASSWORD}
 PAYMENT_MVOLA_NUMBER=${MVOLA:-}
 PAYMENT_ORANGE_MONEY_NUMBER=${ORANGE:-}
 PAYMENT_AIRTEL_MONEY_NUMBER=${AIRTEL:-}
-PAYMENT_ACCOUNT_NAME=All
+PAYMENT_ACCOUNT_NAME="Tsena Pro"
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -153,7 +153,7 @@ run_seed() {
   say "Chargement des donnees de demonstration (efface l'existant)"
   compose exec -T backend npx tsx prisma/seed.ts
   # Le catalogue vide a pu etre mis en cache (5 min) pendant l'attente du demarrage, avant le seed :
-  # on vide le Redis de cette pile (dedie a All) pour que le catalogue apparaisse tout de suite.
+  # on vide le Redis de cette pile (dedie a Tsena Pro) pour que le catalogue apparaisse tout de suite.
   local redis_password
   redis_password="$(grep '^REDIS_PASSWORD=' .env.demo | cut -d= -f2-)"
   compose exec -T redis redis-cli --no-auth-warning -a "$redis_password" FLUSHALL >/dev/null

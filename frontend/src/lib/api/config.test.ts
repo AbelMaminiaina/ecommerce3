@@ -21,6 +21,20 @@ describe('fetchAPI', () => {
     );
   });
 
+  it('lets the browser set the multipart Content-Type when sending a file', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ url: '/uploads/a.webp' }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const body = new FormData();
+    body.append('image', new Blob(['x'], { type: 'image/jpeg' }), 'a.jpg');
+
+    await fetchAPI('/uploads', { method: 'POST', body, token: 'tok' });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.body).toBe(body);
+    expect(init.headers).not.toHaveProperty('Content-Type');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tok' });
+  });
+
   it('returns the parsed JSON body', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1,5 +1,5 @@
 {
-  "name": "b2b-wholesale-backend",
+  "name": "tsena-pro-backend",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -20,6 +20,7 @@
     "db:backfill-b2b": "tsx prisma/backfill-b2b.ts",
     "db:reset-catalog": "tsx --env-file=.env prisma/reset-catalog.ts",
     "db:sync-images": "tsx --env-file=.env prisma/sync-catalog-images.ts",
+    "db:migrate-images": "tsx --env-file=.env src/scripts/migrateImagesToFiles.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "test": "vitest run",
@@ -40,8 +41,10 @@
     "express": "^4.18.2",
     "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
     "nodemailer": "^6.10.1",
     "prisma": "^5.22.0",
+    "sharp": "^0.35.4",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
     "zod": "^3.23.8"
@@ -49,6 +52,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/nodemailer": "^6.4.23",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.11",

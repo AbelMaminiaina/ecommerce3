@@ -12,8 +12,15 @@ vi.mock('../lib/cache.js', () => ({
   invalidateProductCache: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../lib/uploads.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/uploads.js')>()),
+  deleteUploadedImages: vi.fn().mockResolvedValue(undefined),
+  deleteReplacedImages: vi.fn().mockResolvedValue(undefined),
+}));
+
 import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
+import { deleteReplacedImages, deleteUploadedImages } from '../lib/uploads.js';
 import { signToken } from '../lib/auth.js';
 import productsRouter from './products.js';
 
@@ -30,7 +37,7 @@ beforeEach(() => {
 
 function buildApp() {
   const app = express();
-  app.use(express.json({ limit: '50mb' })); // aligné sur src/index.ts
+  app.use(express.json({ limit: '2mb' })); // aligné sur src/index.ts
   app.use('/api/products', productsRouter);
   return app;
 }
@@ -342,6 +349,33 @@ describe('POST /api/products', () => {
     expect(bad.body.error).toBe('Date de disponibilité invalide');
   });
 
+  // Chaque contrôle (type, entier, bornes) renvoie le message français de son champ
+  it.each([
+    [{ price: 0 }, 'Données invalides'],
+    [{ moq: 0 }, 'Quantité minimum de commande invalide'],
+    [{ moq: 2.5 }, 'Quantité minimum de commande invalide'],
+    [{ unit: '  ' }, 'Unité de vente invalide'],
+    [{ estimatedWeightKg: 900 }, 'Poids estimé invalide (entre 0 et 500 kg)'],
+    [{ estimatedWeightKg: -1 }, 'Poids estimé invalide (entre 0 et 500 kg)'],
+    [{ freeShipping: 'oui' }, 'Valeur de livraison gratuite invalide'],
+    [{ availableFrom: true }, 'Date de disponibilité invalide'],
+    [{ images: [42] }, 'Images invalides : envoyez les photos avec le bouton « Ajouter » ou collez une adresse https'],
+    [
+      { images: ['data:image/png;base64,iVBORw0KGgo='] },
+      'Images invalides : envoyez les photos avec le bouton « Ajouter » ou collez une adresse https',
+    ],
+    [{ stockQuantity: -1 }, 'Quantité de stock invalide'],
+  ])('rejects %o with a French message', async (patch, message) => {
+    const res = await request(buildApp())
+      .post('/api/products')
+      .set(adminAuth)
+      .send({ name: 'Produit', category: 'emballage', price: 1000, ...patch });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe(message);
+    expect(prismaMock.product.create).not.toHaveBeenCalled();
+  });
+
   it('defaults moq to 1 and unit to piece when omitted', async () => {
     prismaMock.category.findFirst.mockResolvedValue({ id: 'c1' } as any);
     prismaMock.product.findUnique.mockResolvedValue(null);
@@ -435,6 +469,18 @@ describe('PUT /api/products/:productId', () => {
     expect(updateCall.data.availableFrom).toBeNull();
   });
 
+  it('deletes the image files removed from the product', async () => {
+    prismaMock.product.findUnique.mockResolvedValue(baseProduct({ images: ['/uploads/a.webp', '/uploads/b.webp'] }) as any);
+    prismaMock.product.update.mockResolvedValue(baseProduct({ images: ['/uploads/a.webp'] }) as any);
+
+    await request(buildApp())
+      .put('/api/products/p1')
+      .set(adminAuth)
+      .send({ name: 'Carton emballage', category: 'emballage', price: 31000, images: ['/uploads/a.webp'] });
+
+    expect(deleteReplacedImages).toHaveBeenCalledWith(['/uploads/a.webp', '/uploads/b.webp'], ['/uploads/a.webp']);
+  });
+
   it('rejects an invalid moq on update', async () => {
     const res = await request(buildApp())
       .put('/api/products/p1')
@@ -461,6 +507,8 @@ describe('DELETE /api/products/:productId', () => {
     expect(res.status).toBe(200);
     expect(res.body.message).toContain('désactivé');
     expect(prismaMock.product.delete).not.toHaveBeenCalled();
+    // Produit conservé (commandes) : ses photos aussi
+    expect(deleteUploadedImages).not.toHaveBeenCalled();
     expect(prismaMock.product.update).toHaveBeenCalledWith({
       where: { id: 'p1' },
       data: { inStock: false, stockQuantity: 0 },
@@ -468,13 +516,14 @@ describe('DELETE /api/products/:productId', () => {
   });
 
   it('hard-deletes a product with no orders', async () => {
-    prismaMock.product.findUnique.mockResolvedValue(baseProduct() as any);
+    prismaMock.product.findUnique.mockResolvedValue(baseProduct({ images: ['/uploads/a.webp'] }) as any);
     prismaMock.orderItem.findFirst.mockResolvedValue(null);
 
     const res = await request(buildApp()).delete('/api/products/p1').set(adminAuth);
 
     expect(res.status).toBe(200);
     expect(prismaMock.product.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    expect(deleteUploadedImages).toHaveBeenCalledWith(['/uploads/a.webp']);
   });
 
   it('returns 404 for an unknown product', async () => {
@@ -545,6 +594,7 @@ describe('reviews', () => {
       .send({ rating });
 
     expect(res.status).toBe(400);
+    expect(res.body.error).toBe('La note doit être un entier entre 1 et 5');
     expect(prismaMock.review.upsert).not.toHaveBeenCalled();
   });
 

@@ -14,6 +14,8 @@ vi.mock('@/hooks/useCategories', () => ({
     categories: [{ id: 'c1', name: 'Mobiles', slug: 'mobiles', order: 1, isActive: true }],
   }),
 }));
+const uploadImage = vi.fn().mockResolvedValue('/uploads/photo.webp');
+vi.mock('@/lib/api/uploads', () => ({ uploadImage: (...args: unknown[]) => uploadImage(...args) }));
 vi.mock('@/lib/api/seller', () => ({
   createSellerProduct: (...args: unknown[]) => createSellerProduct(...args),
   updateSellerProduct: vi.fn(),
@@ -22,6 +24,7 @@ vi.mock('@/lib/api/seller', () => ({
 beforeEach(() => {
   push.mockClear();
   createSellerProduct.mockClear();
+  uploadImage.mockClear();
 });
 
 function fillValidForm(moq: string) {
@@ -49,6 +52,20 @@ describe('ProductForm (espace vendeur)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Vente en gros uniquement');
     expect(createSellerProduct).not.toHaveBeenCalled();
+  });
+
+  it('envoie la photo choisie et garde son URL dans le produit (plus de base64)', async () => {
+    render(<ProductForm />);
+    fillValidForm(String(MIN_WHOLESALE_QTY));
+    const file = new File(['x'], 'photo.png', { type: 'image/png' });
+
+    fireEvent.change(screen.getByLabelText(/Ajouter/), { target: { files: [file] } });
+
+    await waitFor(() => expect(uploadImage).toHaveBeenCalledWith(file, 'tok'));
+    await screen.findByAltText('Photo 1');
+    fireEvent.submit(screen.getByRole('button', { name: /Publier/ }).closest('form')!);
+    await waitFor(() => expect(createSellerProduct).toHaveBeenCalledTimes(1));
+    expect(createSellerProduct.mock.calls[0][0].images).toEqual(['/uploads/photo.webp']);
   });
 
   it('envoie le produit puis retourne à la liste quand tout est valide', async () => {

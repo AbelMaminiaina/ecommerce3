@@ -1,8 +1,23 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import prisma from '../lib/prisma.js';
+import { sendValidationError, singleMessage } from '../lib/validation.js';
 import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+// Création / mise à jour d'une catégorie (champs vides => null)
+const categorySchema = z.object({
+  name: z.string({ message: 'Le nom est requis' }).trim().min(1, 'Le nom est requis'),
+  description: z.string({ message: 'Description invalide' }).nullish(),
+  image: z.string({ message: 'Image invalide' }).nullish(),
+  order: z.number({ message: 'Ordre invalide' }).int('Ordre invalide').optional(),
+  isActive: z.boolean({ message: 'Statut invalide' }).optional(),
+});
+
+const reorderSchema = z.object({
+  orders: z.array(z.object({ id: z.string().min(1), order: z.number().int() })),
+});
 
 // Product.category is stored with underscores (historical), Category.slug uses dashes
 const slugToProductCategory = (slug: string) => slug.replace(/-/g, '_');
@@ -110,11 +125,7 @@ function generateSlug(name: string): string {
 // Create category
 router.post('/', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
-    const { name, description, image, order, isActive } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Le nom est requis' });
-    }
+    const { name, description, image, order, isActive } = categorySchema.parse(req.body);
 
     // Generate unique slug
     let slug = generateSlug(name);
@@ -136,6 +147,7 @@ router.post('/', authenticate, requirePlatformAdmin, async (req: Request, res: R
 
     res.status(201).json({ success: true, category });
   } catch (error: any) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error creating category:', error);
     res.status(500).json({ error: 'Failed to create category' });
   }
@@ -145,11 +157,7 @@ router.post('/', authenticate, requirePlatformAdmin, async (req: Request, res: R
 router.put('/:id', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, image, order, isActive } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Le nom est requis' });
-    }
+    const { name, description, image, order, isActive } = categorySchema.parse(req.body);
 
     // Check if category exists
     const existing = await prisma.category.findUnique({ where: { id } });
@@ -183,6 +191,7 @@ router.put('/:id', authenticate, requirePlatformAdmin, async (req: Request, res:
 
     res.json({ success: true, category });
   } catch (error: any) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error updating category:', error);
     res.status(500).json({ error: 'Failed to update category' });
   }
@@ -224,14 +233,10 @@ router.delete('/:id', authenticate, requirePlatformAdmin, async (req: Request, r
 // Reorder categories
 router.post('/reorder', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
-    const { orders } = req.body; // Array of { id, order }
-
-    if (!Array.isArray(orders)) {
-      return res.status(400).json({ error: 'Invalid data' });
-    }
+    const { orders } = reorderSchema.parse(req.body, singleMessage('Invalid data'));
 
     await Promise.all(
-      orders.map(({ id, order }: { id: string; order: number }) =>
+      orders.map(({ id, order }) =>
         prisma.category.update({
           where: { id },
           data: { order },
@@ -241,6 +246,7 @@ router.post('/reorder', authenticate, requirePlatformAdmin, async (req: Request,
 
     res.json({ success: true });
   } catch (error: any) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error reordering categories:', error);
     res.status(500).json({ error: 'Failed to reorder categories' });
   }

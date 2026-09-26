@@ -1,4 +1,4 @@
-# Ferme du Vardier - Site Web E-commerce
+# Tsena Pro - Site Web E-commerce
 
 Site web moderne et chaleureux pour une ferme avicole biologique spécialisée dans la vente d'œufs frais, de poules pondeuses et de produits pour basse-cour.
 
@@ -24,7 +24,7 @@ Site web moderne et chaleureux pour une ferme avicole biologique spécialisée d
 ```bash
 # Cloner le repository
 git clone <repository-url>
-cd FermeDuVardier
+cd ecommerce3
 
 # Installer les dépendances
 npm install
@@ -41,7 +41,7 @@ Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 ## Structure du Projet
 
 ```
-ferme-du-vardier/
+ecommerce3/
 ├── src/
 │   ├── app/                          # Next.js App Router
 │   │   ├── layout.tsx                # Layout principal
@@ -189,7 +189,7 @@ Créer un fichier `.env.local` à la racine :
 ```env
 # Application
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_SITE_NAME="Ferme du Vardier"
+NEXT_PUBLIC_SITE_NAME="Tsena Pro"
 
 # Stripe (pour le paiement)
 STRIPE_SECRET_KEY=sk_test_...
@@ -345,4 +345,4 @@ Pour toute question ou problème :
 
 ## Licence
 
-Propriétaire - Ferme du Vardier © 2024
+Propriétaire - Tsena Pro © 2024

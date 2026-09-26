@@ -9,8 +9,15 @@ vi.mock('../lib/cache.js', () => ({
   invalidateProductCache: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../lib/uploads.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/uploads.js')>()),
+  deleteUploadedImages: vi.fn().mockResolvedValue(undefined),
+  deleteReplacedImages: vi.fn().mockResolvedValue(undefined),
+}));
+
 import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
+import { deleteUploadedImages } from '../lib/uploads.js';
 import { signToken } from '../lib/auth.js';
 import { MIN_WHOLESALE_QTY } from '../lib/wholesale.js';
 import sellerRouter from './seller.js';
@@ -107,6 +114,15 @@ describe('POST /api/seller/products', () => {
       .post('/api/seller/products')
       .set(sellerAuth)
       .send({ ...validProduct, priceTiers: [{ minQty: 50, unitPrice: 1000000 }] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('refuse une image intégrée en base64 : les photos passent par POST /api/uploads', async () => {
+    const res = await request(buildApp())
+      .post('/api/seller/products')
+      .set(sellerAuth)
+      .send({ ...validProduct, images: ['data:image/png;base64,iVBORw0KGgo='] });
 
     expect(res.status).toBe(400);
   });
@@ -219,5 +235,6 @@ describe('modification, stock, retrait, suppression', () => {
 
     expect(res.status).toBe(200);
     expect(prismaMock.product.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    expect(deleteUploadedImages).toHaveBeenCalled();
   });
 });

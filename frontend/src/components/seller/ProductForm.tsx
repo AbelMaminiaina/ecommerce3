@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { Button, Checkbox, Input, Select, Textarea } from '@/components/ui';
 import { useCategories } from '@/hooks/useCategories';
 import { MIN_WHOLESALE_QTY } from '@/lib/utils';
-import { fileToResizedDataUrl } from '@/lib/images';
+import { uploadImage } from '@/lib/api/uploads';
 import { createSellerProduct, updateSellerProduct, type SellerProductInput } from '@/lib/api/seller';
 import type { Product } from '@/types';
 
@@ -49,6 +48,7 @@ export function ProductForm({ product }: ProductFormProps) {
   );
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -56,17 +56,26 @@ export function ProductForm({ product }: ProductFormProps) {
     .filter((c) => c.isActive)
     .map((c) => ({ value: c.slug, label: c.name }));
 
+  // Chaque photo est envoyée tout de suite ; le produit ne garde que son URL
   const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
+    const token = session?.accessToken;
+    if (!files || !token) return;
     setImageError(null);
-    const remaining = MAX_IMAGES - images.length;
-    try {
-      const converted = await Promise.all(Array.from(files).slice(0, remaining).map(fileToResizedDataUrl));
-      setImages((current) => [...current, ...converted]);
-      if (files.length > remaining) setImageError(`${MAX_IMAGES} images maximum`);
-    } catch (err) {
-      setImageError(err instanceof Error ? err.message : 'Image invalide');
-    }
+    const selected = Array.from(files).slice(0, MAX_IMAGES - images.length - uploading);
+    if (files.length > selected.length) setImageError(`${MAX_IMAGES} images maximum`);
+    setUploading((n) => n + selected.length);
+    await Promise.all(
+      selected.map(async (file) => {
+        try {
+          const url = await uploadImage(file, token);
+          setImages((current) => [...current, url]);
+        } catch (err) {
+          setImageError(err instanceof Error ? err.message : 'Image invalide');
+        } finally {
+          setUploading((n) => n - 1);
+        }
+      })
+    );
   };
 
   const updateTier = (index: number, patch: Partial<Tier>) =>
@@ -189,7 +198,7 @@ export function ProductForm({ product }: ProductFormProps) {
                 onClick={() => setTiers((current) => [...current, { minQty: '', unitPrice: '' }])}
                 className="inline-flex items-center gap-1 text-sm font-medium text-prairie-600 hover:underline"
               >
-                <Plus className="h-4 w-4" /> Ajouter un palier
+                <i className="bi bi-plus-lg text-[16px] leading-none" aria-hidden="true" /> Ajouter un palier
               </button>
             )}
           </div>
@@ -207,7 +216,7 @@ export function ProductForm({ product }: ProductFormProps) {
                 className="mb-1 rounded-full p-2 text-red-500 hover:bg-red-50"
                 aria-label="Supprimer le palier"
               >
-                <Trash2 className="h-5 w-5" />
+                <i className="bi bi-trash text-[20px] leading-none" aria-hidden="true" />
               </button>
             </div>
           ))}
@@ -234,13 +243,19 @@ export function ProductForm({ product }: ProductFormProps) {
                 className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 shadow"
                 aria-label={`Retirer la photo ${index + 1}`}
               >
-                <X className="h-4 w-4" />
+                <i className="bi bi-x-lg text-[16px] leading-none" aria-hidden="true" />
               </button>
             </div>
           ))}
-          {images.length < MAX_IMAGES && (
+          {uploading > 0 && (
+            <div className="flex h-28 w-28 flex-col items-center justify-center gap-1 rounded-lg border border-warm-200 bg-warm-50 text-sm text-warm-500" role="status">
+              <i className="bi bi-arrow-repeat animate-spin inline-block text-[20px] leading-none" aria-hidden="true" />
+              Envoi…
+            </div>
+          )}
+          {images.length + uploading < MAX_IMAGES && (
             <label className="flex h-28 w-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-warm-300 text-sm text-warm-500 hover:border-prairie-500 hover:text-prairie-600">
-              <Upload className="h-5 w-5" />
+              <i className="bi bi-upload text-[20px] leading-none" aria-hidden="true" />
               Ajouter
               <input
                 type="file"
@@ -256,7 +271,7 @@ export function ProductForm({ product }: ProductFormProps) {
           )}
         </div>
         {imageError && <p role="alert" className="text-sm text-red-600">{imageError}</p>}
-        <p className="text-xs text-warm-500">PNG, JPEG ou WebP. Les images sont réduites automatiquement (800 px max).</p>
+        <p className="text-xs text-warm-500">PNG, JPEG ou WebP, 8 Mo maximum. Les photos sont optimisées automatiquement.</p>
       </section>
 
       {error && (
@@ -269,7 +284,7 @@ export function ProductForm({ product }: ProductFormProps) {
         <Link href="/vendeur" className="text-sm text-warm-600 hover:underline">
           Annuler
         </Link>
-        <Button type="submit" loading={saving} size="lg">
+        <Button type="submit" loading={saving} disabled={uploading > 0} size="lg">
           {product ? 'Enregistrer et soumettre à validation' : 'Publier (soumettre à validation)'}
         </Button>
       </div>
@@ -279,5 +294,3 @@ export function ProductForm({ product }: ProductFormProps) {
     </form>
   );
 }
-
-export default ProductForm;

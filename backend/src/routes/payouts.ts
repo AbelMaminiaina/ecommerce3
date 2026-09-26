@@ -388,6 +388,4 @@ router.put('/seller/payout-details', authenticate, requireApprovedCompany, async
   }
 });
 
-// Utile aux tests et à la validation côté appelant
-export { isValidCommissionRate };
 export default router;

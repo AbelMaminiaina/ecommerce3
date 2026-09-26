@@ -1,4 +1,4 @@
-# Backend Dockerfile - Ferme du Vardier
+# Backend Dockerfile - Tsena Pro
 FROM node:20-alpine AS base
 
 # Install OpenSSL for Prisma
@@ -45,6 +45,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 
+# Images téléversées : monté comme volume Docker en production (voir docker-compose)
+RUN mkdir -p /app/uploads
+ENV UPLOAD_DIR=/app/uploads
+
 # Set ownership
 RUN chown -R expressjs:nodejs /app
 
@@ -54,5 +58,6 @@ EXPOSE 3001
 
 ENV PORT=3001
 
-# Start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Start the server : migrations, conversion des anciennes images base64 en fichiers (sans effet s'il n'y en a
+# plus ; un échec n'empêche pas le démarrage), puis l'API
+CMD ["sh", "-c", "npx prisma migrate deploy && (node dist/scripts/migrateImagesToFiles.js || true) && node dist/index.js"]

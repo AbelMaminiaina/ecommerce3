@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { isMvolaNumber, normalizeMalagasyMobile } from './phone.js';
-import { OperatorError } from './operatorHttp.js';
+import { type FetchFn, OperatorError, operatorFetch } from './operatorHttp.js';
 
 // Client de l'API « Merchant Pay » de MVola (Telma) : le site demande le paiement, le client confirme sur son
 // téléphone (notification + code secret), puis le site interroge MVola pour connaître le résultat.
@@ -18,7 +18,6 @@ import { OperatorError } from './operatorHttp.js';
 const SANDBOX_URL = 'https://devapi.mvola.mg';
 const PRODUCTION_URL = 'https://api.mvola.mg';
 const MERCHANT_PAY_PATH = '/mvola/mm/transactions/type/merchantpay/1.0.0';
-const REQUEST_TIMEOUT_MS = 15_000;
 
 export interface MvolaConfig {
   consumerKey: string;
@@ -48,7 +47,7 @@ export function getMvolaConfig(env: NodeJS.ProcessEnv = process.env): MvolaConfi
     consumerKey,
     consumerSecret,
     merchantNumber: merchant,
-    partnerName: env.MVOLA_PARTNER_NAME?.trim() || env.PLATFORM_NAME?.trim() || 'All',
+    partnerName: env.MVOLA_PARTNER_NAME?.trim() || env.PLATFORM_NAME?.trim() || 'Tsena Pro',
     baseUrl: (env.MVOLA_API_BASE_URL?.trim() || (sandbox ? SANDBOX_URL : PRODUCTION_URL)).replace(/\/+$/, ''),
     sandbox,
     language: env.MVOLA_LANGUAGE?.trim().toUpperCase() === 'MG' ? 'MG' : 'FR',
@@ -100,8 +99,6 @@ export interface MvolaTransaction {
   reference?: string;
 }
 
-type FetchFn = typeof fetch;
-
 export class MvolaClient {
   private token: { value: string; expiresAt: number } | null = null;
 
@@ -125,39 +122,14 @@ export class MvolaClient {
     return value;
   }
 
-  // Envoi HTTP avec délai maximal ; convertit toute erreur en MvolaError
+  // Envoi HTTP via la brique commune des opérateurs ; toute erreur devient une MvolaError
   private async send(method: 'GET' | 'POST', path: string, init: { headers?: Record<string, string>; body?: string }): Promise<any> {
-    let res: Response;
     try {
-      res = await this.fetchFn(`${this.config.baseUrl}${path}`, {
-        method,
-        headers: init.headers,
-        body: init.body,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
+      return await operatorFetch(this.fetchFn, `${this.config.baseUrl}${path}`, { method, ...init }, 'MVola');
     } catch (error) {
-      const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-      throw new MvolaError(timedOut ? 'MVola ne répond pas (délai dépassé)' : 'MVola est injoignable', undefined, true);
+      if (error instanceof OperatorError) throw new MvolaError(error.message, error.status, error.retriable);
+      throw error;
     }
-
-    let data: any = null;
-    const text = await res.text();
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-    }
-    if (!res.ok) {
-      const detail = data?.ErrorDescription ?? data?.errorDescription ?? data?.error_description ?? data?.message ?? data?.error;
-      throw new MvolaError(
-        `MVola a répondu ${res.status}${detail ? ` : ${String(detail).slice(0, 200)}` : ''}`,
-        res.status,
-        res.status >= 500 || res.status === 429
-      );
-    }
-    return data;
   }
 
   // Appel authentifié ; un jeton refusé (401) est renouvelé une fois
@@ -256,8 +228,4 @@ export function getMvolaClient(): MvolaClient | null {
   const key = JSON.stringify(config);
   if (!shared || shared.key !== key) shared = { key, client: new MvolaClient(config) };
   return shared.client;
-}
-
-export function isMvolaAutomaticEnabled(): boolean {
-  return getMvolaConfig() !== null;
 }

@@ -1,4 +1,4 @@
-# Frontend Dockerfile - Ferme du Vardier (Next.js)
+# Frontend Dockerfile - Tsena Pro (Next.js)
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -22,6 +22,10 @@ COPY . .
 # Set build-time environment variables
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Adresse interne du backend : les réécritures de next.config.js (/api, /uploads) sont figées au build.
+# Sans elle, l'optimiseur d'images (next/image) ne peut pas lire les photos téléversées (/uploads/…).
+ARG BACKEND_URL
+ENV BACKEND_URL=$BACKEND_URL
 
 # Build Next.js
 RUN npm run build

@@ -1,18 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCategories, type Category } from '@/lib/api/categories';
 
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  image?: string;
-  order: number;
-  isActive: boolean;
-}
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+export type { Category };
 
 // Cache pour éviter les requêtes multiples
 let cachedCategories: Category[] | null = null;
@@ -23,8 +14,7 @@ async function fetchCategories(): Promise<Category[]> {
 
   if (cachePromise) return cachePromise;
 
-  cachePromise = fetch(`${API_URL}/categories`)
-    .then(res => res.json())
+  cachePromise = getCategories()
     .then(data => {
       cachedCategories = data.categories || [];
       return cachedCategories as Category[];
@@ -74,5 +64,3 @@ export function invalidateCategoriesCache() {
   cachedCategories = null;
   cachePromise = null;
 }
-
-export default useCategories;

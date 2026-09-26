@@ -1,5 +1,5 @@
 {
-  "name": "all-b2b-frontend",
+  "name": "tsena-pro-frontend",
   "version": "1.0.0",
   "private": true,
   "browserslist": [
@@ -22,7 +22,6 @@
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.31.0",
-    "lucide-react": "^0.563.0",
     "next": "^14.2.35",
     "next-auth": "^4.24.13",
     "react": "^18.3.1",
@@ -36,7 +35,6 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.6",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",

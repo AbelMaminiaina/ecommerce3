@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site';
 
-// Métadonnées communes aux deux layouts racine ((site) en Tailwind, (electro) en Bootstrap).
+// Métadonnées SEO de la boutique (layout racine (shop)) ; l'espace de gestion a les siennes, non indexées.
 export const siteMetadata: Metadata = {
   title: {
-    default: 'All - Plateforme de vente en gros pour professionnels à Madagascar',
-    template: '%s | All',
+    default: 'Tsena Pro - Plateforme de vente en gros pour professionnels à Madagascar',
+    template: '%s | Tsena Pro',
   },
   icons: {
     icon: '/icon.svg',
@@ -12,7 +13,7 @@ export const siteMetadata: Metadata = {
     apple: '/icon.svg',
   },
   description:
-    'All est une plateforme B2B de vente en gros à Madagascar : tarifs dégressifs par quantité, paiement par Mobile Money, livraison à Antananarivo. Ouvert aux particuliers.',
+    'Tsena Pro est une plateforme B2B de vente en gros à Madagascar : tarifs dégressifs par quantité, paiement par Mobile Money, livraison à Antananarivo. Ouvert aux particuliers.',
   keywords: [
     'all',
     'grossiste madagascar',
@@ -26,24 +27,24 @@ export const siteMetadata: Metadata = {
     'livraison professionnelle antananarivo',
     'compte professionnel',
   ],
-  authors: [{ name: 'All' }],
-  creator: 'All',
-  publisher: 'All',
+  authors: [{ name: 'Tsena Pro' }],
+  creator: 'Tsena Pro',
+  publisher: 'Tsena Pro',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://all.mg'),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'fr_MG',
-    url: 'https://all.mg',
-    siteName: 'All',
-    title: 'All - Plateforme de vente en gros pour professionnels',
+    url: SITE_URL,
+    siteName: 'Tsena Pro',
+    title: 'Tsena Pro - Plateforme de vente en gros pour professionnels',
     description:
       'Tarifs dégressifs par quantité, paiement par Mobile Money, livraison à Antananarivo.',
     images: [
@@ -51,13 +52,13 @@ export const siteMetadata: Metadata = {
         url: '/electro/img/carousel-1.jpg',
         width: 1200,
         height: 630,
-        alt: 'All - Plateforme de vente en gros pour professionnels',
+        alt: 'Tsena Pro - Plateforme de vente en gros pour professionnels',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'All - Plateforme de vente en gros pour professionnels',
+    title: 'Tsena Pro - Plateforme de vente en gros pour professionnels',
     description:
       'Tarifs dégressifs par quantité, paiement par Mobile Money, livraison à Antananarivo.',
     images: ['/electro/img/carousel-1.jpg'],

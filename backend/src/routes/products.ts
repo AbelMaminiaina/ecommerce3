@@ -1,9 +1,63 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import prisma from '../lib/prisma.js';
+import { sendValidationError, singleMessage } from '../lib/validation.js';
+import { IMAGE_URL_PATTERN, deleteReplacedImages, deleteUploadedImages } from '../lib/uploads.js';
 import { withCache, CACHE_TTL, CACHE_KEYS, invalidateProductCache } from '../lib/cache.js';
 import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+// ---------- Validation des entrées (zod) ----------
+// Les messages reprennent ceux affichés par l'administration ; l'ordre des champs fixe l'ordre des vérifications
+// (la première erreur est renvoyée au client).
+
+const RATING = 'La note doit être un entier entre 1 et 5';
+const COMMENT = 'Le commentaire est limité à 1000 caractères';
+const reviewSchema = z.object({
+  rating: z.number({ message: RATING }).int(RATING).min(1, RATING).max(5, RATING),
+  comment: z.string({ message: COMMENT }).max(1000, COMMENT).nullish(),
+});
+
+// Toute erreur de ces deux schémas renvoie un message unique (voir les appels à parse)
+const stockSchema = z.object({ stockQuantity: z.number().min(0) });
+const priceTiersSchema = z.object({
+  tiers: z.array(z.object({ minQty: z.number().positive(), unitPrice: z.number().positive() })),
+});
+
+// Le produit ne stocke que des URL d'images : fichiers envoyés via POST /api/uploads, visuels du site
+// ou adresses https. Les images elles-mêmes ne transitent jamais dans le JSON des produits.
+const IMAGES = 'Images invalides : envoyez les photos avec le bouton « Ajouter » ou collez une adresse https';
+const imagesSchema = z
+  .array(z.string({ message: IMAGES }).max(2048, IMAGES).regex(IMAGE_URL_PATTERN, IMAGES), { message: IMAGES })
+  .max(10, '10 images maximum');
+
+// Chaque contrôle porte son message : `{ message }` sur le type ne couvre que les erreurs de type,
+// pas celles de .int() / .min() / .max().
+const INVALID = 'Données invalides';
+const MOQ = 'Quantité minimum de commande invalide';
+const UNIT = 'Unité de vente invalide';
+const WEIGHT = 'Poids estimé invalide (entre 0 et 500 kg)';
+const DATE = 'Date de disponibilité invalide';
+const productSchema = z.object({
+  name: z.string({ message: INVALID }).min(1, INVALID),
+  category: z.string({ message: INVALID }).min(1, INVALID),
+  price: z.number({ message: INVALID }).positive(INVALID),
+  // Champs « vente en gros + logistique » (facultatifs)
+  moq: z.number({ message: MOQ }).int(MOQ).min(1, MOQ).optional(),
+  unit: z.string({ message: UNIT }).trim().min(1, UNIT).optional(),
+  estimatedWeightKg: z.number({ message: WEIGHT }).positive(WEIGHT).max(500, WEIGHT).nullish(),
+  freeShipping: z.boolean({ message: 'Valeur de livraison gratuite invalide' }).optional(),
+  availableFrom: z
+    .union([z.string(), z.number()], { errorMap: () => ({ message: DATE }) })
+    .nullish()
+    .refine((value) => value === undefined || value === null || value === '' || !Number.isNaN(new Date(value).getTime()), {
+      message: DATE,
+    }),
+  images: imagesSchema.optional(),
+  description: z.string({ message: INVALID }).nullish(),
+  stockQuantity: z.number({ message: 'Quantité de stock invalide' }).min(0, 'Quantité de stock invalide').nullish(),
+});
 
 type RatingStats = Map<string, { average: number; count: number }>;
 
@@ -245,14 +299,7 @@ router.get('/:slug/reviews', async (req: Request, res: Response) => {
 // Laisser (ou modifier) son avis : un seul avis par utilisateur et par produit.
 router.post('/:slug/reviews', authenticate, async (req: Request, res: Response) => {
   try {
-    const { rating, comment } = req.body ?? {};
-
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'La note doit être un entier entre 1 et 5' });
-    }
-    if (comment !== undefined && comment !== null && (typeof comment !== 'string' || comment.length > 1000)) {
-      return res.status(400).json({ error: 'Le commentaire est limité à 1000 caractères' });
-    }
+    const { rating, comment } = reviewSchema.parse(req.body ?? {});
     if (req.user?.role === 'platform_admin') {
       return res.status(403).json({ error: "Les administrateurs ne peuvent pas noter les produits" });
     }
@@ -272,6 +319,7 @@ router.post('/:slug/reviews', authenticate, async (req: Request, res: Response) 
     await invalidateProductCache();
     res.status(201).json({ success: true, review: { id: review.id, rating: review.rating, comment: review.comment } });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error saving review:', error);
     res.status(500).json({ error: "Impossible d'enregistrer l'avis" });
   }
@@ -281,11 +329,7 @@ router.post('/:slug/reviews', authenticate, async (req: Request, res: Response) 
 router.patch('/:productId/stock', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { productId } = req.params;
-    const { stockQuantity } = req.body;
-
-    if (typeof stockQuantity !== 'number' || stockQuantity < 0) {
-      return res.status(400).json({ error: 'Quantité de stock invalide' });
-    }
+    const { stockQuantity } = stockSchema.parse(req.body, singleMessage('Quantité de stock invalide'));
 
     const product = await prisma.product.update({
       where: { id: productId },
@@ -298,6 +342,7 @@ router.patch('/:productId/stock', authenticate, requirePlatformAdmin, async (req
     await invalidateProductCache();
     res.json({ success: true, product });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error updating product stock:', error);
     res.status(500).json({ error: 'Failed to update product stock' });
   }
@@ -307,14 +352,7 @@ router.patch('/:productId/stock', authenticate, requirePlatformAdmin, async (req
 router.put('/:productId/price-tiers', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { productId } = req.params;
-    const { tiers } = req.body;
-
-    if (!Array.isArray(tiers) || !tiers.every((t) =>
-      typeof t.minQty === 'number' && t.minQty > 0 &&
-      typeof t.unitPrice === 'number' && t.unitPrice > 0
-    )) {
-      return res.status(400).json({ error: 'Paliers de prix invalides' });
-    }
+    const { tiers } = priceTiersSchema.parse(req.body, singleMessage('Paliers de prix invalides'));
 
     const existingProduct = await prisma.product.findUnique({ where: { id: productId } });
     if (!existingProduct) {
@@ -324,7 +362,7 @@ router.put('/:productId/price-tiers', authenticate, requirePlatformAdmin, async 
     await prisma.$transaction([
       prisma.priceTier.deleteMany({ where: { productId } }),
       prisma.priceTier.createMany({
-        data: tiers.map((t: { minQty: number; unitPrice: number }) => ({
+        data: tiers.map((t) => ({
           productId,
           minQty: t.minQty,
           unitPrice: t.unitPrice,
@@ -341,6 +379,7 @@ router.put('/:productId/price-tiers', authenticate, requirePlatformAdmin, async 
 
     res.json({ success: true, priceTiers });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error updating price tiers:', error);
     res.status(500).json({ error: 'Failed to update price tiers' });
   }
@@ -355,59 +394,6 @@ async function isValidProductCategory(category: unknown): Promise<boolean> {
     where: { slug: category.replace(/_/g, '-') },
   });
   return Boolean(match);
-}
-
-// Validate the optional "vente en gros + logistique" fields shared by create/update.
-// Returns an error message, or null when the payload is acceptable.
-function validateProductExtras(body: any): string | null {
-  const { moq, unit, estimatedWeightKg, freeShipping } = body;
-
-  if (moq !== undefined && (typeof moq !== 'number' || !Number.isInteger(moq) || moq < 1)) {
-    return 'Quantité minimum de commande invalide';
-  }
-  if (unit !== undefined && (typeof unit !== 'string' || !unit.trim())) {
-    return 'Unité de vente invalide';
-  }
-  if (
-    estimatedWeightKg !== undefined &&
-    estimatedWeightKg !== null &&
-    (typeof estimatedWeightKg !== 'number' ||
-      !Number.isFinite(estimatedWeightKg) ||
-      estimatedWeightKg <= 0 ||
-      estimatedWeightKg > 500)
-  ) {
-    return 'Poids estimé invalide (entre 0 et 500 kg)';
-  }
-  if (freeShipping !== undefined && typeof freeShipping !== 'boolean') {
-    return 'Valeur de livraison gratuite invalide';
-  }
-
-  const { availableFrom } = body;
-  if (
-    availableFrom !== undefined &&
-    availableFrom !== null &&
-    availableFrom !== '' &&
-    Number.isNaN(new Date(availableFrom).getTime())
-  ) {
-    return 'Date de disponibilité invalide';
-  }
-
-  return validateImages(body.images);
-}
-
-// Chaque image est stockée en data: URI dans le produit ; on plafonne la taille
-// pour éviter des réponses API géantes (Next.js tronque > 2 Mo côté rendu).
-const MAX_IMAGE_LENGTH = 1_500_000; // ~1,1 Mo binaire une fois décodé
-
-function validateImages(images: unknown): string | null {
-  if (images === undefined) return null;
-  if (!Array.isArray(images) || !images.every((img) => typeof img === 'string')) {
-    return 'Images invalides';
-  }
-  if (images.some((img) => img.length > MAX_IMAGE_LENGTH)) {
-    return 'Une image est trop lourde. Réduisez sa taille (max ~1 Mo) avant de l’ajouter.';
-  }
-  return null;
 }
 
 // Normalise la date de disponibilité reçue du client (string ISO / '' / null) en Date | null.
@@ -430,16 +416,7 @@ function generateSlug(name: string): string {
 router.post('/', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { name, description, category, price, stockQuantity, images,
-      moq, unit, estimatedWeightKg, freeShipping, availableFrom } = req.body;
-
-    if (!name || !category || typeof price !== 'number' || price <= 0) {
-      return res.status(400).json({ error: 'Données invalides' });
-    }
-
-    const extrasError = validateProductExtras(req.body);
-    if (extrasError) {
-      return res.status(400).json({ error: extrasError });
-    }
+      moq, unit, estimatedWeightKg, freeShipping, availableFrom } = productSchema.parse(req.body);
 
     if (!(await isValidProductCategory(category))) {
       return res.status(400).json({
@@ -476,6 +453,7 @@ router.post('/', authenticate, requirePlatformAdmin, async (req: Request, res: R
     await invalidateProductCache();
     res.status(201).json({ success: true, product: transformProduct(product) });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product' });
   }
@@ -486,16 +464,7 @@ router.put('/:productId', authenticate, requirePlatformAdmin, async (req: Reques
   try {
     const { productId } = req.params;
     const { name, description, category, price, stockQuantity, images,
-      moq, unit, estimatedWeightKg, freeShipping, availableFrom } = req.body;
-
-    if (!name || !category || typeof price !== 'number' || price <= 0) {
-      return res.status(400).json({ error: 'Données invalides' });
-    }
-
-    const extrasError = validateProductExtras(req.body);
-    if (extrasError) {
-      return res.status(400).json({ error: extrasError });
-    }
+      moq, unit, estimatedWeightKg, freeShipping, availableFrom } = productSchema.parse(req.body);
 
     if (!(await isValidProductCategory(category))) {
       return res.status(400).json({
@@ -558,9 +527,11 @@ router.put('/:productId', authenticate, requirePlatformAdmin, async (req: Reques
       },
     });
 
+    await deleteReplacedImages(existingProduct.images, product.images);
     await invalidateProductCache();
     res.json({ success: true, product: transformProduct(product) });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product' });
   }
@@ -571,24 +542,23 @@ router.put('/:productId', authenticate, requirePlatformAdmin, async (req: Reques
 router.patch('/:productId/images', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { productId } = req.params;
-    const { images } = req.body;
+    const { images } = z.object({ images: imagesSchema }).parse(req.body);
 
-    if (!Array.isArray(images)) {
-      return res.status(400).json({ error: 'Images invalides' });
-    }
-    const imagesError = validateImages(images);
-    if (imagesError) {
-      return res.status(400).json({ error: imagesError });
+    const existingProduct = await prisma.product.findUnique({ where: { id: productId }, select: { images: true } });
+    if (!existingProduct) {
+      return res.status(404).json({ error: 'Produit non trouvé' });
     }
 
     const product = await prisma.product.update({
       where: { id: productId },
       data: { images },
     });
+    await deleteReplacedImages(existingProduct.images, images);
 
     await invalidateProductCache();
     res.json({ success: true, product: transformProduct(product) });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     console.error('Error updating product images:', error);
     res.status(500).json({ error: 'Failed to update product images' });
   }
@@ -598,7 +568,7 @@ router.patch('/:productId/images', authenticate, requirePlatformAdmin, async (re
 router.patch('/:productId/visibility', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { productId } = req.params;
-    const { isActive } = req.body;
+    const { isActive } = z.object({ isActive: z.boolean().optional() }).parse(req.body ?? {});
 
     const product = await prisma.product.update({
       where: { id: productId },
@@ -612,6 +582,7 @@ router.patch('/:productId/visibility', authenticate, requirePlatformAdmin, async
       message: product.isActive ? 'Produit visible dans le catalogue' : 'Produit masqué du catalogue'
     });
   } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -673,6 +644,7 @@ router.delete('/:productId', authenticate, requirePlatformAdmin, async (req: Req
     }
 
     await prisma.product.delete({ where: { id: productId } });
+    await deleteUploadedImages(existingProduct.images);
     await invalidateProductCache();
     res.json({ success: true, message: 'Produit supprimé' });
   } catch (error) {

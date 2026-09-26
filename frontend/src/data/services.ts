@@ -91,7 +91,7 @@ Chaque commande est accompagnée d'un suivi de statut consultable dans "Mes comm
     id: 'support',
     title: 'Support & conseils',
     slug: 'support',
-    description: 'Une question sur une commande, un paiement ou un produit ? Notre équipe accompagne les entreprises clientes de All.',
+    description: 'Une question sur une commande, un paiement ou un produit ? Notre équipe accompagne les entreprises clientes de Tsena Pro.',
     longDescription: `Nous accompagnons nos clients professionnels à chaque étape, de l'inscription au suivi des commandes.
 
 **Nos services de support :**
@@ -123,7 +123,7 @@ Chaque commande est accompagnée d'un suivi de statut consultable dans "Mes comm
 export const faqItems: FAQItem[] = [
   {
     id: '1',
-    question: 'Comment créer un compte professionnel sur All ?',
+    question: 'Comment créer un compte professionnel sur Tsena Pro ?',
     answer: 'Rendez-vous sur la page "Devenir client professionnel", renseignez les informations de votre entreprise (raison sociale, numéro fiscal, contact) ainsi que celles du premier utilisateur. Notre équipe valide ensuite votre dossier sous 1 à 2 jours ouvrés.',
     category: 'compte',
   },
@@ -170,12 +170,3 @@ export const faqItems: FAQItem[] = [
     category: 'general',
   },
 ];
-
-export function getFAQByCategory(category: string): FAQItem[] {
-  if (category === 'all') return faqItems;
-  return faqItems.filter((item) => item.category === category);
-}
-
-export function getServiceBySlug(slug: string): Service | undefined {
-  return services.find((s) => s.slug === slug);
-}

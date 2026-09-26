@@ -60,7 +60,7 @@ describe('OrangeMoneyClient (contre le faux serveur Orange)', () => {
   const mock = createMockOrange({ clientId: 'test-client', clientSecret: 'test-secret', merchantKey: 'test-merchant' });
   let config: OrangeConfig;
   let client: OrangeMoneyClient;
-  const params = { orderId: 'abc123', amount: 150_000, description: 'Commande ORD-1', returnUrl: 'https://all.mg/back', cancelUrl: 'https://all.mg/cancel' };
+  const params = { orderId: 'abc123', amount: 150_000, description: 'Commande ORD-1', returnUrl: 'https://tsenapro.mg/back', cancelUrl: 'https://tsenapro.mg/cancel' };
 
   beforeAll(async () => {
     const { url } = await mock.listen();
@@ -73,7 +73,7 @@ describe('OrangeMoneyClient (contre le faux serveur Orange)', () => {
       country: 'dev',
       currency: 'OUV',
       language: 'fr',
-      siteUrl: 'https://all.mg',
+      siteUrl: 'https://tsenapro.mg',
       notifUrl: 'http://127.0.0.1:9/notif', // injoignable : la notification est sans importance ici
     };
   });
@@ -98,8 +98,8 @@ describe('OrangeMoneyClient (contre le faux serveur Orange)', () => {
       currency: 'OUV',
       order_id: 'abc123',
       amount: 150_000,
-      return_url: 'https://all.mg/back',
-      cancel_url: 'https://all.mg/cancel',
+      return_url: 'https://tsenapro.mg/back',
+      cancel_url: 'https://tsenapro.mg/cancel',
       notif_url: config.notifUrl,
     });
   });
