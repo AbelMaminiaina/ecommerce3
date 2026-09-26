@@ -12,6 +12,7 @@ const COLUMNS = [
       { name: 'Nos vendeurs', href: '/vendeurs' },
       { name: 'Mes favoris', href: '/favoris' },
       { name: 'Mon panier', href: '/panier' },
+      { name: 'Application mobile', href: '/application' },
       { name: 'Devenir client pro', href: '/inscription' },
     ],
   },

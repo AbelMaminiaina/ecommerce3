@@ -617,3 +617,24 @@ a:hover { color: color-mix(in srgb, var(--sw-accent), black 15%); }
   .sw-footer-nav .sw-footer-links a::before { left: 50%; transform: translateX(-50%); }
   .sw-footer-nav .sw-footer-links a:hover { padding-left: 0; }
 }
+
+/* ==========================================================================
+   Application mobile (/application)
+   ========================================================================== */
+.sw-app-download { max-width: 720px; margin: 0 auto 32px; text-align: center; }
+.sw-app-download h2 { font-family: var(--sw-heading-font); color: var(--sw-heading); font-weight: 700; margin-bottom: 12px; }
+.sw-app-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 28px; }
+.sw-app-button {
+  display: inline-flex; align-items: center; gap: 12px; min-width: 210px;
+  padding: 12px 22px; border-radius: 14px; background: var(--sw-heading); color: #fff;
+  text-align: left; font-weight: 600; font-size: 17px; line-height: 1.15; transition: background .2s ease;
+}
+.sw-app-button:hover { background: var(--sw-accent); color: #fff; }
+.sw-app-button i { font-size: 30px; }
+.sw-app-button small { display: block; font-size: 11px; font-weight: 400; opacity: .8; }
+.sw-app-button.is-soon { background: var(--sw-light); color: var(--sw-text); cursor: default; }
+.sw-app-note { margin-top: 16px; font-size: 13px; color: var(--sw-text); }
+.sw-app-feature { height: 100%; padding: 24px; border-radius: 12px; background: var(--sw-light); text-align: center; }
+.sw-app-feature i { font-size: 28px; color: var(--sw-accent); }
+.sw-app-feature h3 { font-size: 17px; font-family: var(--sw-heading-font); color: var(--sw-heading); font-weight: 700; margin: 12px 0 6px; }
+.sw-app-feature p { font-size: 14px; margin: 0; }

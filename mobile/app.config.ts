@@ -1,6 +1,10 @@
 import type { ExpoConfig } from 'expo/config';
 
-// Adresse de l'API : EXPO_PUBLIC_API_URL (HTTPS obligatoire sur téléphone, voir ARCHITECTURE-MOBILE.md §5)
+// Adresse de l'API : EXPO_PUBLIC_API_URL (HTTPS recommandé, voir ARCHITECTURE-MOBILE.md §5).
+// Android bloque le HTTP non chiffré : il n'est autorisé que si l'API est en http:// (démo sur IP sans domaine).
+// Sur ce réseau, mots de passe et jetons circulent en clair : à réserver aux essais.
+const cleartextApi = /^http:\/\//i.test(process.env.EXPO_PUBLIC_API_URL ?? '');
+
 const config: ExpoConfig = {
   name: 'Tsena Pro',
   slug: 'tsena-pro',
@@ -22,7 +26,19 @@ const config: ExpoConfig = {
   },
   web: { favicon: './assets/favicon.png' },
   experiments: { typedRoutes: true },
-  plugins: ['expo-router', 'expo-status-bar', 'expo-secure-store', 'expo-image', 'expo-web-browser', 'expo-font', 'expo-splash-screen'],
+  owner: '00781',
+  // Projet EAS (compilation dans le cloud Expo), créé par « eas init »
+  extra: { eas: { projectId: '49f10614-171c-426c-a2da-1741ae375234' } },
+  plugins: [
+    'expo-router',
+    'expo-status-bar',
+    'expo-secure-store',
+    'expo-image',
+    'expo-web-browser',
+    'expo-font',
+    'expo-splash-screen',
+    ['expo-build-properties', { android: { usesCleartextTraffic: cleartextApi } }],
+  ],
 };
 
 export default config;

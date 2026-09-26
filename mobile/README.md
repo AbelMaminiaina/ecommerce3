@@ -25,6 +25,25 @@ npx expo-doctor      # dépendances et configuration
 npm run test:shared  # (à la racine) tests du code partagé
 ```
 
+## Fichier à télécharger (Android)
+
+Le site propose l'application sur sa page `/application` (lien « Application mobile » du pied de page).
+Le fichier Android (APK) est compilé par EAS, le service de compilation d'Expo (compte gratuit sur expo.dev).
+L'adresse de l'API est fixée dans `eas.json` (profil `preview`) : aujourd'hui la démo `http://167.86.111.192:8082/api`.
+Une adresse `http://` autorise le trafic non chiffré sur Android (`app.config.ts`) : réservé aux essais.
+
+```bash
+cd mobile
+npx eas-cli@latest login
+npx eas-cli@latest init                              # une fois : relie le projet au compte
+npx eas-cli@latest build -p android --profile preview
+```
+
+Puis, sur le serveur : déposer le fichier dans `/opt/tsena-pro/downloads/tsena-pro.apk` (servi par nginx sous
+`/telechargements/`), ajouter `ANDROID_APP_URL=/telechargements/tsena-pro.apk` à `.env.demo` et redémarrer le
+conteneur du site. La page `/application` affiche alors « Télécharger pour Android ».
+Après publication sur les stores, `ANDROID_APP_URL` et `IOS_APP_URL` reçoivent l'adresse de Google Play et de l'App Store.
+
 ## Organisation
 
 | Dossier | Rôle |
