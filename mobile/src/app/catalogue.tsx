@@ -1,24 +1,11 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { catalogApi } from '@tsena/shared';
-import { ProductCard } from '../components/ProductCard';
+import { ProductCard } from '../features/catalog/ProductCard';
+import { useCategories, useProductList } from '../features/catalog/queries';
 import { Body, Button, Message, errorMessage, styles as ui } from '../components/ui';
-import { api } from '../lib/api';
+import { useDebounced } from '../hooks/useDebounced';
 import { colors, fonts } from '../theme';
-
-const PAGE_SIZE = 20;
-
-/** Valeur mise à jour après une pause de frappe (évite un appel par lettre) */
-function useDebounced<T>(value: T, delay = 400): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 
 export default function Catalogue() {
   const params = useLocalSearchParams<{ category?: string }>();
@@ -26,18 +13,9 @@ export default function Catalogue() {
   const [search, setSearch] = useState('');
   const term = useDebounced(search.trim());
 
-  const categories = useQuery({ queryKey: ['categories'], queryFn: () => catalogApi.categories(api) });
-
-  const products = useInfiniteQuery({
-    queryKey: ['products', 'list', category, term],
-    queryFn: ({ pageParam, signal }) =>
-      catalogApi.products(api, { page: pageParam, limit: PAGE_SIZE, category: category || undefined, search: term || undefined }, signal),
-    initialPageParam: 1,
-    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
-  });
-
-  const items = products.data?.pages.flatMap((p) => p.products) ?? [];
-  const total = products.data?.pages[0]?.total;
+  const categories = useCategories();
+  const products = useProductList({ category, search: term });
+  const { products: items, total } = products;
   const setCategory = (slug: string) => router.setParams({ category: slug || undefined });
 
   return (
@@ -88,9 +66,7 @@ export default function Catalogue() {
           contentContainerStyle={{ padding: 10 }}
           renderItem={({ item }) => <ProductCard product={item} />}
           onEndReachedThreshold={0.5}
-          onEndReached={() => {
-            if (products.hasNextPage && !products.isFetchingNextPage) products.fetchNextPage();
-          }}
+          onEndReached={products.loadMore}
           refreshing={products.isRefetching && !products.isFetchingNextPage}
           onRefresh={() => products.refetch()}
           ListHeaderComponent={

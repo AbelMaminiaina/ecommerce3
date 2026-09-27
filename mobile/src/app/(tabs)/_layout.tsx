@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
-import { HeaderActions } from '../../components/HeaderActions';
+import { HeaderActions } from '../../features/cart/HeaderActions';
 import { colors, fonts } from '../../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];

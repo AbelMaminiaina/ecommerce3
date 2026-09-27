@@ -2,9 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatPrice, formatQuantity, isUpcoming, type Product } from '@tsena/shared';
-import { useIsFavorite, useWishlist } from '../features/wishlist/store';
-import { colors, fonts, radius } from '../theme';
-import { ProductImage } from './ProductImage';
+import { useIsFavorite, useWishlist } from '../wishlist/store';
+import { colors, fonts, radius } from '../../theme';
+import { ProductImage } from '../../components/ProductImage';
 
 // Carte produit du kit Kutuku : image sur fond gris arrondi, cœur en haut à droite, texte centré
 export function ProductCard({ product }: { product: Product }) {

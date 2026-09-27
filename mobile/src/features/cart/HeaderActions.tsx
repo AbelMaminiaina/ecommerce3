@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useCartCount } from '../features/cart/store';
-import { colors, fonts } from '../theme';
+import { useCartCount } from './store';
+import { colors, fonts } from '../../theme';
 
 // Icônes en haut à droite (kit Kutuku) : recherche et panier avec pastille du nombre d'articles
 export function HeaderActions({ search = true }: { search?: boolean }) {

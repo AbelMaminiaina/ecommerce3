@@ -1,5 +1,5 @@
 import { Image, type ImageStyle } from 'expo-image';
-import { imageUrl } from '../lib/api';
+import { imageUrl } from '../lib/images';
 import { colors } from '../theme';
 
 // Image du backend (« /uploads/… » rendu absolu), gardée en cache disque

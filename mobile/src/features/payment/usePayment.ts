@@ -3,9 +3,14 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { paymentsApi, type PaymentAttempt } from '@tsena/shared';
 import { api } from '../../lib/api';
+import { queryKeys } from '../queryKeys';
 
 const POLL_INTERVAL_MS = 4000;
 const isSafeUrl = (url: unknown): url is string => typeof url === 'string' && /^https:\/\//i.test(url);
+
+/** Moyens de paiement Mobile Money proposés (MVola, Orange Money, Airtel Money) */
+export const usePaymentMethods = () =>
+  useQuery({ queryKey: queryKeys.payment.methods(), queryFn: () => paymentsApi.methods(api) });
 
 // Paiement d'une commande (et des commandes du même panier) — même déroulé que le site (hooks/usePayment.ts) :
 //  - MVola, Airtel Money : demande envoyée sur le téléphone du client, qui la confirme ;
@@ -14,7 +19,7 @@ const isSafeUrl = (url: unknown): url is string => typeof url === 'string' && /^
 // Une demande en cours est suivie toutes les 4 s jusqu'à son résultat.
 export function usePayment(orderNumber: string, email?: string) {
   const queryClient = useQueryClient();
-  const statusKey = ['payment', orderNumber, email ?? null];
+  const statusKey = queryKeys.payment.status(orderNumber, email);
   const [startedAttemptId, setStartedAttemptId] = useState<string | null>(null);
 
   const status = useQuery({
@@ -27,13 +32,13 @@ export function usePayment(orderNumber: string, email?: string) {
     startedAttemptId ?? (status.data?.attempt?.status === 'pending' ? status.data.attempt.id : null);
 
   const attempt = useQuery({
-    queryKey: ['payment-attempt', pendingId],
+    queryKey: queryKeys.payment.attempt(pendingId),
     queryFn: async (): Promise<PaymentAttempt> => {
       const latest = await paymentsApi.attempt(api, pendingId!, email);
       if (latest.status !== 'pending') {
         setStartedAttemptId(null);
         await queryClient.invalidateQueries({ queryKey: statusKey });
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.orders.all() });
       }
       return latest;
     },
@@ -46,7 +51,7 @@ export function usePayment(orderNumber: string, email?: string) {
     if (!isSafeUrl(url)) return false;
     await WebBrowser.openBrowserAsync(url);
     // Retour dans l'application (page fermée) : on vérifie tout de suite le résultat
-    queryClient.invalidateQueries({ queryKey: ['payment-attempt'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.payment.attempts() });
     return true;
   };
 
@@ -55,7 +60,7 @@ export function usePayment(orderNumber: string, email?: string) {
       paymentsApi.startAuto(api, { orderNumber, payerPhone: payerPhone?.trim() || undefined, email }),
     onSuccess: async ({ attempt: started }) => {
       setStartedAttemptId(started.id);
-      queryClient.setQueryData(['payment-attempt', started.id], started);
+      queryClient.setQueryData(queryKeys.payment.attempt(started.id), started);
       if (started.paymentUrl) await openOperatorPage(started.paymentUrl);
     },
   });

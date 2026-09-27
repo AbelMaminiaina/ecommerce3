@@ -1,44 +1,13 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-import { createApiClient, type Session, type SessionStore } from '@tsena/shared';
+import { createApiClient } from '@tsena/shared';
+import { API_URL } from './config';
+import { sessionStore } from './session';
 
-const SESSION_KEY = 'tsena.session';
+// Client API unique de l'application : jeton ajouté à chaque appel, renouvelé sur 401 (voir @tsena/shared)
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3011/api';
-
-// Jetons chiffrés par le système (Keychain iOS, Keystore Android), jamais en clair.
-// expo-secure-store n'existe pas dans un navigateur : l'aperçu web (développement) garde la session le temps de l'onglet.
-const storage =
-  Platform.OS === 'web'
-    ? {
-        getItemAsync: async (key: string) => globalThis.sessionStorage?.getItem(key) ?? null,
-        setItemAsync: async (key: string, value: string) => globalThis.sessionStorage?.setItem(key, value),
-        deleteItemAsync: async (key: string) => globalThis.sessionStorage?.removeItem(key),
-      }
-    : SecureStore;
-
-export const sessionStore: SessionStore = {
-  async get() {
-    const raw = await storage.getItemAsync(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
-  },
-  set: (session) => storage.setItemAsync(SESSION_KEY, JSON.stringify(session)),
-  clear: () => storage.deleteItemAsync(SESSION_KEY),
-};
-
-// Appelé quand la session ne peut plus être renouvelée ; l'écran de compte s'y abonne
+// Appelé quand la session ne peut plus être renouvelée ; le magasin de session (features/auth) s'y abonne
 let onExpired: (() => void) | undefined;
 export const setSessionExpiredHandler = (handler: () => void) => {
   onExpired = handler;
 };
 
 export const api = createApiClient({ baseUrl: API_URL, session: sessionStore, onSessionExpired: () => onExpired?.() });
-
-// Images du catalogue de démonstration (« /electro/img/… ») : servies par le site, pas par le backend.
-// En production site et API partagent le domaine ; en développement EXPO_PUBLIC_SITE_URL pointe vers le site.
-const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/+$/, '');
-
-export function imageUrl(path: string | null | undefined): string | null {
-  if (path && SITE_URL && path.startsWith('/') && !path.startsWith('/uploads/')) return `${SITE_URL}${path}`;
-  return api.assetUrl(path);
-}

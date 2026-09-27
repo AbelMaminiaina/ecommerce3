@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, formatDate, formatPrice, ordersApi, type Order } from '@tsena/shared';
+import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, formatDate, formatPrice, type Order } from '@tsena/shared';
 import { ProductImage } from '../../components/ProductImage';
 import { Body, Button, ErrorText, Message, errorMessage } from '../../components/ui';
 import { useAuth } from '../../features/auth/store';
-import { api } from '../../lib/api';
+import { useMyOrders } from '../../features/orders/queries';
 import { colors, fonts, radius } from '../../theme';
 
 const STATUS_TONE: Record<Order['status'], string> = {
@@ -48,7 +47,7 @@ function OrderCard({ order }: { order: Order }) {
 
 export default function Orders() {
   const signedIn = useAuth((s) => s.status === 'signed-in');
-  const orders = useQuery({ queryKey: ['orders', 'mine'], queryFn: () => ordersApi.mine(api), enabled: signedIn });
+  const orders = useMyOrders();
 
   if (!signedIn) {
     return (

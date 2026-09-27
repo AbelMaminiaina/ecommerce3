@@ -1,4 +1,4 @@
-import type { DeliveryMethod, OrderStatus, PaymentMethodId, PaymentStatus, ProductBadge } from './types';
+import type { DeliveryMethod, OrderStatus, PaymentStatus, ProductBadge } from './types';
 
 const priceFormatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
@@ -46,12 +46,6 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   submitted: 'Paiement à vérifier',
   paid: 'Paiement confirmé',
   rejected: 'Paiement refusé',
-};
-
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethodId, string> = {
-  mvola: 'MVola',
-  orange_money: 'Orange Money',
-  airtel_money: 'Airtel Money',
 };
 
 export const DELIVERY_LABELS: Record<DeliveryMethod, { label: string; delay: string }> = {

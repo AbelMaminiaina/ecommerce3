@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { useAuth } from '../features/auth/store';
+import { OFFLINE_QUERY_ROOTS } from '../features/queryKeys';
 import { colors, fonts } from '../theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -53,7 +54,7 @@ export default function RootLayout() {
         // Seules les données publiques sont gardées (pas les commandes ni les paiements)
         dehydrateOptions: {
           shouldDehydrateQuery: (q) =>
-            q.state.status === 'success' && ['products', 'product', 'categories'].includes(String(q.queryKey[0])),
+            q.state.status === 'success' && (OFFLINE_QUERY_ROOTS as readonly string[]).includes(String(q.queryKey[0])),
         },
       }}
     >

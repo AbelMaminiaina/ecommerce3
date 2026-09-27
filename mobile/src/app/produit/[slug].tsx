@@ -1,12 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQuery } from '@tanstack/react-query';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BADGE_LABELS,
-  catalogApi,
   clampToMoq,
   formatDate,
   formatPrice,
@@ -14,14 +12,14 @@ import {
   isUpcoming,
   resolveUnitPrice,
 } from '@tsena/shared';
-import { HeaderActions } from '../../components/HeaderActions';
+import { HeaderActions } from '../../features/cart/HeaderActions';
 import { ProductImage } from '../../components/ProductImage';
 import { QuantityStepper } from '../../components/QuantityStepper';
 import { Body, Button, Loading, Message, Row, errorMessage } from '../../components/ui';
 import { useTieredPricing } from '../../features/auth/store';
 import { useCart } from '../../features/cart/store';
+import { useProduct, useProductReviews } from '../../features/catalog/queries';
 import { useIsFavorite, useWishlist } from '../../features/wishlist/store';
-import { api } from '../../lib/api';
 import { colors, fonts, radius } from '../../theme';
 
 function RoundButton({ icon, onPress, label }: { icon: 'chevron-back'; onPress: () => void; label: string }) {
@@ -40,8 +38,8 @@ export default function ProductScreen() {
   const add = useCart((s) => s.add);
   const toggleFavorite = useWishlist((s) => s.toggle);
 
-  const product = useQuery({ queryKey: ['product', slug], queryFn: () => catalogApi.product(api, slug) });
-  const reviews = useQuery({ queryKey: ['reviews', slug], queryFn: () => catalogApi.reviews(api, slug), enabled: !!product.data });
+  const product = useProduct(slug);
+  const reviews = useProductReviews(slug, !!product.data);
   const favorite = useIsFavorite(product.data?.id ?? '');
 
   // null : minimum de commande du produit, tant que le client n'a pas choisi

@@ -29,8 +29,9 @@ function query(params: Record<string, string | number | boolean | undefined>): s
 // ---------- Comptes ----------
 
 export const authApi = {
-  login: (api: ApiClient, data: LoginInput) =>
-    api.request<LoginResponse>('/auth/login', { method: 'POST', body: data, auth: false }),
+  /** `client: 'mobile'` : jeton d'accès court, renouvelé automatiquement (le site garde un jeton de 7 jours) */
+  login: (api: ApiClient, data: LoginInput, client?: 'mobile') =>
+    api.request<LoginResponse>('/auth/login', { method: 'POST', body: client ? { ...data, client } : data, auth: false }),
 
   register: (api: ApiClient, data: RegisterCustomerInput) =>
     api.request<{ success: boolean; message: string; userId: string }>('/auth/register', {
@@ -68,14 +69,8 @@ export const catalogApi = {
 
   product: (api: ApiClient, slug: string) => api.request<Product>(`/products/${enc(slug)}`, { auth: false }),
 
-  related: (api: ApiClient, slug: string, limit = 4) =>
-    api.request<Product[]>(`/products/${enc(slug)}/related?limit=${limit}`, { auth: false }),
-
   reviews: (api: ApiClient, slug: string) =>
     api.request<ProductReviews>(`/products/${enc(slug)}/reviews`, { auth: false }),
-
-  addReview: (api: ApiClient, slug: string, data: { rating: number; comment?: string }) =>
-    api.request<unknown>(`/products/${enc(slug)}/reviews`, { method: 'POST', body: data }),
 
   categories: async (api: ApiClient) => {
     const { categories } = await api.request<{ categories: Category[] }>('/categories', { auth: false });
@@ -92,7 +87,6 @@ export const ordersApi = {
 
   mine: async (api: ApiClient) => (await api.request<{ orders: Order[] }>('/checkout/orders/mine')).orders,
 
-  byNumber: (api: ApiClient, orderNumber: string) => api.request<Order>(`/checkout/${enc(orderNumber)}`),
 };
 
 // ---------- Paiement ----------

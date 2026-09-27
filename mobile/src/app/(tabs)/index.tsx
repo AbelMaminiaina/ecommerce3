@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQuery } from '@tanstack/react-query';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -15,14 +14,14 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { catalogApi, formatPrice, FREE_SHIPPING_THRESHOLD, type Product } from '@tsena/shared';
+import { formatPrice, FREE_SHIPPING_THRESHOLD, type Product } from '@tsena/shared';
 import { Brand } from '../../components/Brand';
-import { HeaderActions } from '../../components/HeaderActions';
-import { ProductCard } from '../../components/ProductCard';
+import { HeaderActions } from '../../features/cart/HeaderActions';
+import { ProductCard } from '../../features/catalog/ProductCard';
 import { ProductImage } from '../../components/ProductImage';
 import { Body, Button, Message, errorMessage } from '../../components/ui';
 import { useAuth } from '../../features/auth/store';
-import { api } from '../../lib/api';
+import { useCategories, useLatestProducts } from '../../features/catalog/queries';
 import { colors, fonts, radius } from '../../theme';
 
 const PROMOS = [
@@ -91,8 +90,8 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll: () => voi
 export default function Home() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'home' | 'categories'>('home');
-  const categories = useQuery({ queryKey: ['categories'], queryFn: () => catalogApi.categories(api) });
-  const latest = useQuery({ queryKey: ['products', 'home'], queryFn: () => catalogApi.products(api, { limit: 10 }) });
+  const categories = useCategories();
+  const latest = useLatestProducts(10);
   const products: Product[] = latest.data?.products ?? [];
 
   return (

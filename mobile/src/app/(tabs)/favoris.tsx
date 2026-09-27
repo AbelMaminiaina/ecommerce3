@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { FlatList } from 'react-native';
-import { ProductCard } from '../../components/ProductCard';
+import { ProductCard } from '../../features/catalog/ProductCard';
 import { Button, Message } from '../../components/ui';
 import { useWishlist } from '../../features/wishlist/store';
 

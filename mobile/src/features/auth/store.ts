@@ -7,7 +7,8 @@ import {
   type RegisterCustomerInput,
   type User,
 } from '@tsena/shared';
-import { api, sessionStore, setSessionExpiredHandler } from '../../lib/api';
+import { api, setSessionExpiredHandler } from '../../lib/api';
+import { sessionStore } from '../../lib/session';
 
 type Status = 'loading' | 'guest' | 'signed-in';
 
@@ -51,14 +52,14 @@ export const useAuth = create<AuthState>()((set) => ({
   },
 
   login: async (data) => {
-    const { token, refreshToken, user, company } = await authApi.login(api, data);
+    const { token, refreshToken, user, company } = await authApi.login(api, data, 'mobile');
     await sessionStore.set({ token, refreshToken });
     set({ status: 'signed-in', user, company });
   },
 
   register: async (data) => {
     await authApi.register(api, data);
-    const { token, refreshToken, user, company } = await authApi.login(api, { email: data.email, password: data.password });
+    const { token, refreshToken, user, company } = await authApi.login(api, { email: data.email, password: data.password }, 'mobile');
     await sessionStore.set({ token, refreshToken });
     set({ status: 'signed-in', user, company });
   },

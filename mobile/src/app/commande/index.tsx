@@ -1,32 +1,9 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, router } from 'expo-router';
-import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  DELIVERY_LABELS,
-  formatPrice,
-  guestSchema,
-  ordersApi,
-  paymentsApi,
-  shippingAddressSchema,
-  summarizeCart,
-  type CheckoutInput,
-  type DeliveryMethod,
-  type PaymentMethodId,
-} from '@tsena/shared';
+import { DELIVERY_LABELS, formatPrice } from '@tsena/shared';
 import { Body, Button, Card, ErrorText, Message, Row, TextField, Title, errorMessage, styles as ui } from '../../components/ui';
-import { useAuth, useTieredPricing } from '../../features/auth/store';
-import { useCart } from '../../features/cart/store';
-import { useGuestOrders } from '../../features/payment/guestOrders';
-import { api } from '../../lib/api';
+import { DELIVERY_METHODS, useCheckoutForm } from '../../features/checkout/useCheckoutForm';
 import { colors, fonts } from '../../theme';
-
-const DELIVERY_METHODS: DeliveryMethod[] = ['standard', 'express', 'retrait'];
-type Errors = Record<string, string | undefined>;
-
-// Premier message de chaque champ d'une validation zod
-const fieldErrors = (issues: { path: (string | number)[]; message: string }[]): Errors =>
-  Object.fromEntries(issues.map((i) => [String(i.path[0]), i.message]).reverse());
 
 function Choice({ selected, onPress, title, detail }: { selected: boolean; onPress: () => void; title: string; detail?: string }) {
   return (
@@ -46,57 +23,15 @@ function Choice({ selected, onPress, title, detail }: { selected: boolean; onPre
 }
 
 export default function Checkout() {
-  const { items, clear } = useCart();
-  const signedIn = useAuth((s) => s.status === 'signed-in');
-  const tiered = useTieredPricing();
-  const rememberGuest = useGuestOrders((s) => s.remember);
+  const form = useCheckoutForm((orderNumber) =>
+    router.replace({ pathname: '/commande/[numero]', params: { numero: orderNumber } })
+  );
+  const { signedIn, summary, delivery, setDelivery, methods, selectedMethod, setMethod, address, setAddress } = form;
+  const { guest, setGuest, notes, setNotes, errors, submit } = form;
 
-  const [delivery, setDelivery] = useState<DeliveryMethod>('standard');
-  const [method, setMethod] = useState<PaymentMethodId | null>(null);
-  const [address, setAddress] = useState({ street: '', city: '', postalCode: '' });
-  const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
-  const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Errors>({});
-
-  const methods = useQuery({ queryKey: ['payment-methods'], queryFn: () => paymentsApi.methods(api) });
-  const selectedMethod = method ?? methods.data?.[0]?.id ?? null;
-
-  const order = useMutation({
-    mutationFn: (data: CheckoutInput) => ordersApi.create(api, data),
-    onSuccess: (result) => {
-      const orderNumber = result.orderNumber ?? result.orders?.[0]?.orderNumber;
-      if (!orderNumber) return;
-      if (!signedIn) rememberGuest(orderNumber, guest.email.trim());
-      clear();
-      router.replace({ pathname: '/commande/[numero]', params: { numero: orderNumber } });
-    },
-  });
-
-  if (items.length === 0 && !order.isSuccess) {
+  if (form.empty) {
     return <Message title="Votre panier est vide" action={<Button title="Voir le catalogue" onPress={() => router.navigate('/catalogue')} />} />;
   }
-
-  const summary = summarizeCart(items, delivery, tiered);
-
-  const submit = () => {
-    const next: Errors = {};
-    const addr = delivery === 'retrait' ? null : shippingAddressSchema.safeParse(address);
-    if (addr && !addr.success) Object.assign(next, fieldErrors(addr.error.issues));
-    const who = signedIn ? null : guestSchema.safeParse(guest);
-    if (who && !who.success) Object.assign(next, fieldErrors(who.error.issues));
-    if (!selectedMethod) next.method = 'Choisissez un moyen de paiement';
-    setErrors(next);
-    if (Object.keys(next).length > 0 || !selectedMethod) return;
-
-    order.mutate({
-      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-      deliveryMethod: delivery,
-      paymentMethod: selectedMethod,
-      shippingAddress: addr?.success ? { ...addr.data, country: 'Madagascar' } : undefined,
-      guest: who?.success ? who.data : undefined,
-      notes: notes.trim() || undefined,
-    });
-  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -181,8 +116,8 @@ export default function Checkout() {
           <Body muted style={{ fontSize: 12, marginTop: 4 }}>Le montant définitif est confirmé par le serveur.</Body>
         </Card>
 
-        <ErrorText>{errorMessage(order.error)}</ErrorText>
-        <Button title="Valider et payer" loading={order.isPending} onPress={submit} />
+        <ErrorText>{errorMessage(form.submitError)}</ErrorText>
+        <Button title="Valider et payer" loading={form.submitting} onPress={submit} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

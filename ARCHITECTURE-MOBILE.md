@@ -38,36 +38,50 @@ même base de données, mêmes règles métier que le site web.
 Principe : **le code métier est écrit une seule fois** (types, validation, appels API, paliers de prix, quantité
 minimum, livraison) dans `packages/shared`, utilisé par le site et par l'application.
 
-## 3. Organisation du dépôt
+## 3. Organisation du dépôt et couches de l'application
 
 ```
 ecommerce3/
-├── backend/            API (existant)
-├── frontend/           site web (existant)
-├── packages/shared/    code commun web + mobile
-│   ├── types/          Product, Order, User…
-│   ├── schemas/        schémas zod (commande, inscription…)
-│   ├── api/            client API (fetchAPI, produits, commande…)
-│   └── pricing/        paliers, quantité minimum, livraison
-└── mobile/             application Expo (voir mobile/README.md)
-    ├── src/app/        écrans (Expo Router)
-    │   ├── (tabs)/     Accueil · Catalogue · Panier · Compte
-    │   ├── produit/[slug]
-    │   ├── commande/   récapitulatif → paiement → confirmation
-    │   ├── vendeur/    espace vendeur (phase 2)
-    │   └── auth/       connexion, inscription
-    ├── components/     ProductCard, PriceTiers, QuantityStepper…
-    ├── features/       logique par domaine (panier, paiement, compte)
-    ├── lib/            stockage sécurisé, notifications, liens, configuration
-    ├── theme/          couleurs et polices ShopWise (#0d9488, Quicksand / Roboto)
-    └── app.config.ts   environnements dev / test / production (EXPO_PUBLIC_API_URL)
+├── backend/                 API (existant)
+├── frontend/                site web (existant)
+├── packages/shared/src/     code commun, sans React : types, prix, validation (zod), panier, client API
+└── mobile/src/              application Expo
+    ├── app/                 1. ÉCRANS (Expo Router) : mise en page et navigation uniquement
+    │   ├── (tabs)/          Accueil · Mes commandes · Favoris · Profil
+    │   ├── catalogue, panier, produit/[slug], commande/ (formulaire, paiement), auth/, compte/
+    │   └── _layout.tsx      installe le cache (TanStack Query), les polices, la session
+    ├── features/            2. DOMAINES : données, états et composants métier
+    │   ├── queryKeys.ts     toutes les clés du cache, en un seul endroit
+    │   ├── auth/            session (connexion, inscription, suppression du compte)
+    │   ├── catalog/         queries.ts (catalogue, fiche, avis, catégories) · ProductCard
+    │   ├── cart/            panier local · HeaderActions (icônes recherche et panier)
+    │   ├── checkout/        useCheckoutForm (livraison, coordonnées, validation, envoi)
+    │   ├── orders/          mes commandes, passage de commande
+    │   ├── payment/         Mobile Money (suivi, Orange Money, référence manuelle)
+    │   └── wishlist/        favoris
+    ├── components/          3. INTERFACE GÉNÉRIQUE, sans métier : ui (boutons, champs…), Brand, ProductImage…
+    ├── hooks/               3. hooks génériques (useDebounced)
+    ├── lib/                 4. INFRASTRUCTURE : config (variables d'environnement), session (secure-store),
+    │                           api (client), images, storage
+    └── theme/               couleurs et polices (#0d9488, Plus Jakarta Sans)
 ```
+
+**Règle des couches** : chaque couche n'utilise que les couches en dessous (1 → 2 → 3 → 4 → `theme` / `@tsena/shared`).
+Elle est **vérifiée par le lint** (`mobile/eslint.config.js`, `npx expo lint`) :
+
+- un écran n'appelle jamais l'API ni `useQuery` directement : il utilise un hook de `features/` (`useProduct`, `useMyOrders`…) ;
+- `components/` et `hooks/` ne dépendent d'aucun domaine ; `lib/` ne dépend de rien au-dessus d'elle ;
+- les clés du cache ne sont écrites que dans `features/queryKeys.ts`.
+
+**Pas de code inutile sur le téléphone** : le code propre à l'aperçu web est dans des fichiers `*.web.ts`
+(ex. `lib/session.web.ts`), que Metro n'embarque jamais dans l'application Android / iPhone ; le code métier
+partagé est écrit une fois dans `packages/shared`. Détection du code mort : `npx knip` dans `mobile/`.
 
 ## 4. Contrat API utilisé par l'application
 
 | Besoin | Endpoint | Remarque |
 |---|---|---|
-| Connexion | `POST /api/auth/login` | Renvoie `token` (accès, 7 jours) **et** `refreshToken` (60 jours) |
+| Connexion | `POST /api/auth/login` `{ email, password, client: 'mobile' }` | Renvoie `token` (accès, **1 heure** avec `client: 'mobile'`, 7 jours pour le site) **et** `refreshToken` (60 jours). 10 essais par compte et par IP toutes les 15 min (429 ensuite) |
 | Renouvellement | `POST /api/auth/refresh` `{ refreshToken }` | Nouveau `token` + nouveau `refreshToken` (rotation) ; 401 = se reconnecter |
 | Déconnexion | `POST /api/auth/logout` `{ refreshToken }` | Ferme la session de l'appareil |
 | Suppression du compte | `DELETE /api/auth/me` `{ password }` | Exigée par Apple et Google ; commandes conservées (anonymisées) |
@@ -85,7 +99,7 @@ ecommerce3/
    enregistrer les nouveaux jetons, rejouer la requête. Si le renouvellement échoue : écran de connexion.
 4. Un jeton de renouvellement déjà utilisé qui revient ferme **toutes** les sessions du compte (vol probable).
 
-Limite connue : après une suppression de compte, un jeton d'accès déjà émis reste accepté jusqu'à son expiration
+Limite connue : après une suppression de compte, un jeton d'accès déjà émis reste accepté jusqu'à son expiration (1 heure au plus pour l'application)
 (les jetons ne sont pas vérifiés en base à chaque appel) ; l'application l'efface immédiatement.
 
 ## 5. HTTPS
