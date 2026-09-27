@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -36,6 +37,9 @@ function MenuItem({
   );
 }
 
+// Version de l'application installée (app.config.ts), pour savoir quelle compilation tourne sur le téléphone
+const APP_VERSION = `Tsena · version ${Constants.expoConfig?.version ?? '?'}`;
+
 export default function Profile() {
   const { status, user, company, logout } = useAuth();
 
@@ -48,6 +52,7 @@ export default function Profile() {
           <View style={{ gap: 10 }}>
             <Button title="Se connecter" onPress={() => router.push('/auth/connexion')} />
             <Button variant="outline" title="Créer un compte" onPress={() => router.push('/auth/inscription')} />
+            <Text style={styles.version}>{APP_VERSION}</Text>
           </View>
         }
       />
@@ -90,6 +95,7 @@ export default function Profile() {
         <MenuItem icon="log-out-outline" label="Se déconnecter" onPress={confirmLogout} />
         <MenuItem icon="trash-outline" label="Supprimer mon compte" onPress={go('/compte/supprimer')} danger />
       </View>
+      <Text style={styles.version}>{APP_VERSION}</Text>
     </ScrollView>
   );
 }
@@ -106,4 +112,5 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
   itemIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
   itemLabel: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 15 },
+  version: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 8 },
 });

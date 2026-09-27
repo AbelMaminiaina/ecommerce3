@@ -10,7 +10,8 @@ const config: ExpoConfig = {
   name: 'Tsena',
   slug: 'tsena-pro',
   scheme: 'tsenapro',
-  version: '1.0.0',
+  // Version affichée (Profil) ; le numéro interne Android (versionCode) est augmenté par EAS à chaque compilation
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
