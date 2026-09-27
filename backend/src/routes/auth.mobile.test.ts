@@ -62,6 +62,39 @@ describe('POST /api/auth/login (application mobile)', () => {
     expect(stored.tokenHash).toBe(sha256(res.body.refreshToken));
     expect(stored.tokenHash).not.toContain(res.body.refreshToken);
   });
+
+  // Durée du jeton d'accès, en secondes
+  const lifetime = (token: string) => {
+    const { iat, exp } = verifyToken(token) as any;
+    return exp - iat;
+  };
+
+  it('donne un jeton d’accès court à l’application (client « mobile ») et 7 jours au site', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(await userRow());
+    const app = buildApp();
+
+    const mobile = await request(app).post('/api/auth/login').send({ email: 'jean@exemple.mg', password: 'secret123', client: 'mobile' });
+    const web = await request(app).post('/api/auth/login').send({ email: 'jean@exemple.mg', password: 'secret123' });
+
+    expect(lifetime(mobile.body.token)).toBe(60 * 60);
+    expect(lifetime(web.body.token)).toBe(7 * 24 * 60 * 60);
+  });
+
+  it('bloque les essais de mot de passe en série sur un même compte (429)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(await userRow({ email: 'cible@exemple.mg' }));
+    const app = buildApp();
+    const attempt = () => request(app).post('/api/auth/login').send({ email: 'cible@exemple.mg', password: 'mauvais' });
+
+    for (let i = 0; i < 10; i++) expect((await attempt()).status).toBe(401);
+    const blocked = await attempt();
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers['retry-after']).toBeTruthy();
+
+    // Un autre compte depuis la même adresse (même opérateur mobile) n'est pas bloqué
+    prismaMock.user.findUnique.mockResolvedValue(await userRow());
+    const other = await request(app).post('/api/auth/login').send({ email: 'jean@exemple.mg', password: 'secret123' });
+    expect(other.status).toBe(200);
+  }, 30_000); // 12 vérifications de mot de passe (bcrypt, volontairement lent)
 });
 
 describe('POST /api/auth/refresh', () => {
@@ -73,7 +106,10 @@ describe('POST /api/auth/refresh', () => {
     const res = await request(buildApp()).post('/api/auth/refresh').send({ refreshToken: REFRESH });
 
     expect(res.status).toBe(200);
-    expect(verifyToken(res.body.token)).toMatchObject({ userId: 'u1', role: 'buyer', companyId: 'c1' });
+    const renewed = verifyToken(res.body.token) as any;
+    expect(renewed).toMatchObject({ userId: 'u1', role: 'buyer', companyId: 'c1' });
+    // Jeton court : seule l'application renouvelle sa session
+    expect(renewed.exp - renewed.iat).toBe(60 * 60);
     expect(res.body.refreshToken).not.toBe(REFRESH);
     // L'ancien jeton est révoqué (rotation)
     expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
@@ -151,6 +187,20 @@ describe('DELETE /api/auth/me (suppression du compte)', () => {
     expect(res.status).toBe(401);
     expect(prismaMock.user.update).not.toHaveBeenCalled();
   });
+
+  it('bloque après 5 mauvais mots de passe, même avec le bon ensuite (429)', async () => {
+    // Compte distinct : le compteur d'échecs est propre à chaque compte
+    prismaMock.user.findUnique.mockResolvedValue(await userRow({ id: 'u-lock' }));
+    const lockAuth = { Authorization: `Bearer ${signToken({ userId: 'u-lock', role: 'customer', companyId: null })}` };
+    const app = buildApp();
+
+    for (let i = 0; i < 5; i++) {
+      expect((await request(app).delete('/api/auth/me').set(lockAuth).send({ password: 'faux' })).status).toBe(401);
+    }
+    const blocked = await request(app).delete('/api/auth/me').set(lockAuth).send({ password: 'secret123' });
+    expect(blocked.status).toBe(429);
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  }, 30_000);
 
   it('refuse la suppression d’un compte administrateur', async () => {
     prismaMock.user.findUnique.mockResolvedValue(await userRow({ role: 'platform_admin' }));

@@ -26,6 +26,9 @@ yarn-error.log*
 certbot/
 backups/*.sql
 backups/env/
+# Sauvegardes de la démo (scripts/backup-demo.sh)
+backups/*.gz
+backups/*.log
 nginx/ssl/
 
 # Vercel

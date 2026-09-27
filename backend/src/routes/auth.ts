@@ -2,13 +2,39 @@ import { Router, Request, Response } from 'express';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import prisma from '../lib/prisma.js';
-import { hashPassword, comparePassword, signToken } from '../lib/auth.js';
+import { hashPassword, comparePassword, signToken, MOBILE_ACCESS_TOKEN_TTL } from '../lib/auth.js';
 import { issueRefreshToken, revokeAllRefreshTokens, revokeRefreshToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { sendValidationError, singleMessage } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { failureLimiter, rateLimit } from '../lib/rateLimit.js';
 
 const router = Router();
+
+// ---------- Limites d'essais (contre les essais de mots de passe en série) ----------
+// Beaucoup d'abonnés mobiles partagent une même adresse IP chez leur opérateur : la limite stricte porte sur
+// le couple IP + e-mail visé, la limite par IP seule est large (elle ne freine que les attaques de masse).
+const QUARTER_HOUR = 15 * 60 * 1000;
+const emailOf = (req: Request) => String(req.body?.email ?? '').trim().toLowerCase().slice(0, 200);
+const loginPerAccount = rateLimit({
+  windowMs: QUARTER_HOUR,
+  max: 10,
+  key: (req) => `${req.ip}|${emailOf(req)}`,
+  message: 'Trop de tentatives de connexion pour ce compte. Réessayez dans 15 minutes.',
+});
+const loginPerIp = rateLimit({
+  windowMs: QUARTER_HOUR,
+  max: 100,
+  message: 'Trop de tentatives de connexion depuis cette adresse. Réessayez dans 15 minutes.',
+});
+const registerPerIp = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: 'Trop d’inscriptions depuis cette adresse. Réessayez plus tard.',
+});
+const refreshPerIp = rateLimit({ windowMs: QUARTER_HOUR, max: 300 });
+// Suppression du compte : le mot de passe est vérifié ; 5 mauvais mots de passe par compte bloquent 15 minutes
+const deletePasswordFailures = failureLimiter({ windowMs: QUARTER_HOUR, max: 5 });
 
 const registerCompanySchema = z.object({
   companyName: z.string().min(1),
@@ -25,7 +51,7 @@ const registerCompanySchema = z.object({
 });
 
 // Inscription d'une nouvelle entreprise (crée l'entreprise en statut "pending" + son premier utilisateur admin)
-router.post('/register-company', async (req: Request, res: Response) => {
+router.post('/register-company', registerPerIp, async (req: Request, res: Response) => {
   try {
     const data = registerCompanySchema.parse(req.body);
 
@@ -87,7 +113,7 @@ const registerCustomerSchema = z.object({
 });
 
 // Inscription d'un particulier : compte actif immédiatement, sans validation ni entreprise
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerPerIp, async (req: Request, res: Response) => {
   try {
     const data = registerCustomerSchema.parse(req.body);
 
@@ -124,11 +150,13 @@ router.post('/register', async (req: Request, res: Response) => {
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  // « mobile » : jeton d'accès court (MOBILE_ACCESS_TOKEN_TTL), renouvelé par l'application ; absent = site web (7 jours)
+  client: z.enum(['mobile']).optional(),
 });
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginPerIp, loginPerAccount, async (req: Request, res: Response) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const { email, password, client } = loginSchema.parse(req.body);
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -139,7 +167,8 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
-    const token = signToken({ userId: user.id, role: user.role, companyId: user.companyId });
+    const payload = { userId: user.id, role: user.role, companyId: user.companyId };
+    const token = client === 'mobile' ? signToken(payload, MOBILE_ACCESS_TOKEN_TTL) : signToken(payload);
     // Application mobile : renouvelle la session sans redemander le mot de passe (POST /api/auth/refresh)
     const refreshToken = await issueRefreshToken(user.id);
 
@@ -212,7 +241,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
 const refreshSchema = z.object({ refreshToken: z.string().min(20).max(200) });
 
 // Échange le jeton de renouvellement contre un nouveau jeton d'accès (et un nouveau jeton de renouvellement)
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', refreshPerIp, async (req: Request, res: Response) => {
   try {
     const { refreshToken } = refreshSchema.parse(req.body, singleMessage('Jeton de renouvellement manquant'));
     const rotation = await rotateRefreshToken(refreshToken);
@@ -228,7 +257,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
     }
 
     res.json({
-      token: signToken({ userId: user.id, role: user.role, companyId: user.companyId }),
+      // Seule l'application utilise le renouvellement : jeton court
+      token: signToken({ userId: user.id, role: user.role, companyId: user.companyId }, MOBILE_ACCESS_TOKEN_TTL),
       refreshToken: rotation.refreshToken,
     });
   } catch (error) {
@@ -266,9 +296,16 @@ router.delete('/me', authenticate, async (req: Request, res: Response) => {
     if (user.role === 'platform_admin') {
       return res.status(403).json({ error: "Un compte administrateur ne peut pas être supprimé depuis l'application" });
     }
+    const retryAfter = deletePasswordFailures.retryAfter(user.id);
+    if (retryAfter > 0) {
+      res.setHeader('Retry-After', String(retryAfter));
+      return res.status(429).json({ error: 'Trop de mots de passe incorrects. Réessayez dans 15 minutes.' });
+    }
     if (!(await comparePassword(password, user.passwordHash))) {
+      deletePasswordFailures.fail(user.id);
       return res.status(401).json({ error: 'Mot de passe incorrect' });
     }
+    deletePasswordFailures.reset(user.id);
 
     const unusablePassword = await hashPassword(randomBytes(32).toString('hex'));
     let productsWithdrawn = false;

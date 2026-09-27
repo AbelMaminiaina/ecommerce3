@@ -12,8 +12,16 @@
 # Usage : docker compose -f docker-compose.demo.yml --env-file .env.demo up -d --build
 name: tsena-pro
 
+# Journaux des conteneurs limités à 3 fichiers de 10 Mo par service : sans limite, ils finissent par remplir le disque
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *default-logging
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -29,6 +37,7 @@ services:
       retries: 5
 
   redis:
+    logging: *default-logging
     image: redis:7-alpine
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD requis}
@@ -41,6 +50,7 @@ services:
       retries: 5
 
   backend:
+    logging: *default-logging
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -53,7 +63,7 @@ services:
       FRONTEND_URL: ${PUBLIC_URL:?PUBLIC_URL requis}
       # Signe les sessions : obligatoire (sans elle le backend utiliserait une valeur de dev publique)
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis}
-      PLATFORM_NAME: Tsena Pro
+      PLATFORM_NAME: Tsena
       # Compte administrateur créé par le seed
       PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-admin@example.com}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD requis}
@@ -106,6 +116,7 @@ services:
       - "3001"
 
   frontend:
+    logging: *default-logging
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -133,6 +144,7 @@ services:
       - "3000"
 
   nginx:
+    logging: *default-logging
     image: nginx:alpine
     restart: unless-stopped
     ports:
@@ -148,6 +160,7 @@ services:
   # Tunnel HTTPS Cloudflare (démarré avec --profile tunnel). L'adresse https://xxxx.trycloudflare.com
   # est affichée dans les logs et change à chaque recréation du conteneur (usage démo).
   tunnel:
+    logging: *default-logging
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
     restart: unless-stopped
