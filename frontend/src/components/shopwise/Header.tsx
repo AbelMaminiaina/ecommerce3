@@ -119,9 +119,9 @@ export function ShopwiseHeader() {
       {/* Logo, recherche, actions */}
       <div className="sw-mainbar">
         <div className="container-fluid container-xl">
-          <Link href="/" className="sw-logo" aria-label="Tsena Pro - Accueil">
+          <Link href="/" className="sw-logo" aria-label="Tsena - Accueil">
             <i className="bi bi-cart2"></i>
-            <span>Tsena Pro</span>
+            <span>Tsena</span>
           </Link>
 
           {searchForm}

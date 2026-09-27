@@ -7,12 +7,12 @@ export function OrganizationJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Tsena Pro',
+    name: 'Tsena',
     alternateName: 'TsenaPro',
     url: SITE_URL,
     logo: `${SITE_URL}/icon-512.png`,
     description:
-      'Tsena Pro est une plateforme de vente en gros pour professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money, livraison à Antananarivo.',
+      'Tsena est une plateforme de vente en gros pour professionnels à Madagascar : tarifs dégressifs, paiement par Mobile Money, livraison à Antananarivo.',
     address: {
       '@type': 'PostalAddress',
       streetAddress: CONTACT.address.street,
@@ -47,7 +47,7 @@ export function LocalBusinessJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     '@id': `${SITE_URL}/#localbusiness`,
-    name: 'Tsena Pro',
+    name: 'Tsena',
     image: `${SITE_URL}/icon-512.png`,
     description:
       'Plateforme de vente en gros pour professionnels à Madagascar : catalogue multi-catégories, tarifs dégressifs par quantité, paiement par Mobile Money.',
@@ -122,7 +122,7 @@ export function ProductJsonLd({
     sku: sku || slug,
     brand: {
       '@type': 'Brand',
-      name: 'Tsena Pro',
+      name: 'Tsena',
     },
     offers: {
       '@type': 'Offer',
@@ -131,7 +131,7 @@ export function ProductJsonLd({
       availability: `https://schema.org/${availability}`,
       seller: {
         '@type': 'Organization',
-        name: 'Tsena Pro',
+        name: 'Tsena',
       },
     },
   };
@@ -177,7 +177,7 @@ export function WebsiteJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Tsena Pro',
+    name: 'Tsena',
     url: SITE_URL,
     description:
       'Plateforme de vente en gros pour professionnels à Madagascar - tarifs dégressifs, paiement par Mobile Money.',

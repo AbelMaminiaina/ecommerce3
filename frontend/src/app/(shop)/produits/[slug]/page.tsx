@@ -31,16 +31,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     keywords: [
       product.name,
       product.category,
+      'tsena',
       'tsena pro',
       'madagascar',
       'vente en gros',
       'livraison antananarivo',
     ],
     openGraph: {
-      title: `${product.name} | Tsena Pro`,
+      title: `${product.name} | Tsena`,
       description: product.shortDescription || product.description?.slice(0, 160),
       url: `${SITE_URL}/produits/${slug}`,
-      siteName: 'Tsena Pro',
+      siteName: 'Tsena',
       images: [
         {
           url: imageUrl,
@@ -54,7 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${product.name} | Tsena Pro`,
+      title: `${product.name} | Tsena`,
       description: product.shortDescription || product.description?.slice(0, 160),
       images: [imageUrl],
     },

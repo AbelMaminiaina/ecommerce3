@@ -156,7 +156,7 @@ function InscriptionContent() {
                 ) : (
                   <>
                     <div className="auth-card-header">
-                      <h3>Rejoignez Tsena Pro</h3>
+                      <h3>Rejoignez Tsena</h3>
                       <p>Créez votre compte en moins d&apos;une minute et profitez de tous vos avantages.</p>
                     </div>
 

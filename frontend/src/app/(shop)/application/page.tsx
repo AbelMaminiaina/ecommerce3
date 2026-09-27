@@ -5,7 +5,7 @@ import { getMobileAppLinks } from '@/lib/mobileApp';
 export const metadata: Metadata = {
   title: 'Application mobile',
   description:
-    'Téléchargez l’application Tsena Pro pour Android et iPhone : catalogue, commande en gros et paiement Mobile Money depuis votre téléphone.',
+    'Téléchargez l’application Tsena pour Android et iPhone : catalogue, commande en gros et paiement Mobile Money depuis votre téléphone.',
 };
 
 // Liens lus à chaque requête (variables d'environnement du serveur, voir lib/mobileApp.ts)
@@ -27,7 +27,7 @@ export default function ApplicationPage() {
       <section className="sw-section">
         <div className="container">
           <div className="sw-app-download">
-            <h2>Tsena Pro dans votre poche</h2>
+            <h2>Tsena dans votre poche</h2>
             <p className="lead">
               Commandez en gros et payez par Mobile Money depuis votre téléphone, avec le même compte que sur le site.
             </p>

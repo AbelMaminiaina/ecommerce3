@@ -66,7 +66,7 @@ export function AdminShell({
         <div className="brand">
           <Link href={homeHref} className="flex items-center gap-2.5">
             <i className="bi bi-cart2"></i>
-            <span className="sitename">Tsena Pro</span>
+            <span className="sitename">Tsena</span>
             <span className="brand-tag">{brandTag}</span>
           </Link>
           <button type="button" className="sidebar-close" aria-label="Fermer le menu" onClick={() => setSidebarOpen(false)}>
@@ -158,7 +158,7 @@ export function AdminShell({
 
         <footer className="admin-footer">
           <span>
-            © {new Date().getFullYear()} <strong>Tsena Pro</strong> – {footerNote}
+            © {new Date().getFullYear()} <strong>Tsena</strong> – {footerNote}
           </span>
           <span>Plateforme B2B</span>
         </footer>

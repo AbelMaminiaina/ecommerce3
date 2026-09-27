@@ -6,7 +6,7 @@ import './admin-shopwise.css';
 import { SessionProvider } from '@/components/providers/SessionProvider';
 
 export const metadata: Metadata = {
-  title: 'Espace de gestion - Tsena Pro',
+  title: 'Espace de gestion - Tsena',
   robots: { index: false, follow: false },
   icons: siteIcons,
 };

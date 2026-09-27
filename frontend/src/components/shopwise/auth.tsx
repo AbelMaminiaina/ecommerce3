@@ -8,7 +8,7 @@ export function AuthAside() {
   return (
     <div className="col-lg-5 d-none d-lg-block">
       <div className="auth-aside">
-        <span className="auth-aside-badge"><i className="bi bi-stars"></i> Membre Tsena Pro</span>
+        <span className="auth-aside-badge"><i className="bi bi-stars"></i> Membre Tsena</span>
         <h3>Vos avantages client</h3>
         <ul className="auth-perks">
           <li>

@@ -90,7 +90,7 @@ export function ShopwiseFooter() {
           <div className="row gy-4">
             <div className="col-lg-3 col-md-6">
               <div className="sw-footer-widget">
-                <Link href="/" className="sw-footer-logo">Tsena Pro</Link>
+                <Link href="/" className="sw-footer-logo">Tsena</Link>
                 <p>
                   La plateforme de vente en gros : smartphones, ordinateurs, photo et accessoires, avec des tarifs
                   dégressifs pour les professionnels.
@@ -166,7 +166,7 @@ export function ShopwiseFooter() {
             <Link href="/mentions-legales">Mentions légales</Link>
           </div>
           <p className="sw-copyright">
-            © {new Date().getFullYear()} <strong>Tsena Pro</strong>. Tous droits réservés.
+            © {new Date().getFullYear()} <strong>Tsena</strong>. Tous droits réservés.
           </p>
         </div>
       </div>

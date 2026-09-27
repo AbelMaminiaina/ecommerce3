@@ -22,11 +22,11 @@ export const metadata: Metadata = {
     'livraison professionnelle antananarivo',
   ],
   openGraph: {
-    title: 'Catalogue | Tsena Pro',
+    title: 'Catalogue | Tsena',
     description:
       'Un catalogue multi-catégories pour professionnels, avec tarifs dégressifs par quantité et livraison à Antananarivo.',
     url: `${SITE_URL}/produits`,
-    siteName: 'Tsena Pro',
+    siteName: 'Tsena',
     locale: 'fr_MG',
     type: 'website',
   },

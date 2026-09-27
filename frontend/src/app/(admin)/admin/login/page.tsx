@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
         <div className="admin-sidebar !static !w-auto !bg-transparent !transform-none mb-4">
           <div className="brand justify-center !border-0">
             <i className="bi bi-cart2"></i>
-            <span className="sitename">Tsena Pro</span>
+            <span className="sitename">Tsena</span>
             <span className="brand-tag">Admin</span>
           </div>
         </div>
