@@ -47,7 +47,7 @@ export function getMvolaConfig(env: NodeJS.ProcessEnv = process.env): MvolaConfi
     consumerKey,
     consumerSecret,
     merchantNumber: merchant,
-    partnerName: env.MVOLA_PARTNER_NAME?.trim() || env.PLATFORM_NAME?.trim() || 'Tsena Pro',
+    partnerName: env.MVOLA_PARTNER_NAME?.trim() || env.PLATFORM_NAME?.trim() || 'Tsena',
     baseUrl: (env.MVOLA_API_BASE_URL?.trim() || (sandbox ? SANDBOX_URL : PRODUCTION_URL)).replace(/\/+$/, ''),
     sandbox,
     language: env.MVOLA_LANGUAGE?.trim().toUpperCase() === 'MG' ? 'MG' : 'FR',

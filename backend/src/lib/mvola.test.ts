@@ -69,7 +69,7 @@ describe('MvolaClient (contre le faux serveur MVola)', () => {
       consumerKey: 'test-key',
       consumerSecret: 'test-secret',
       merchantNumber: '0340000000',
-      partnerName: 'Tsena Pro',
+      partnerName: 'Tsena',
       baseUrl: url,
       sandbox: true,
       language: 'FR',
@@ -107,7 +107,7 @@ describe('MvolaClient (contre le faux serveur MVola)', () => {
       version: '1.0',
       userlanguage: 'FR',
       useraccountidentifier: 'msisdn;0340000000',
-      partnername: 'Tsena Pro',
+      partnername: 'Tsena',
       'x-callback-url': 'https://all.example/api/payments/mvola/callback',
       'cache-control': 'no-cache',
     });
@@ -121,7 +121,7 @@ describe('MvolaClient (contre le faux serveur MVola)', () => {
       debitParty: [{ key: 'msisdn', value: '0343500003' }],
       creditParty: [{ key: 'msisdn', value: '0340000000' }],
     });
-    expect(req.body.metadata).toEqual(expect.arrayContaining([{ key: 'partnerName', value: 'Tsena Pro' }]));
+    expect(req.body.metadata).toEqual(expect.arrayContaining([{ key: 'partnerName', value: 'Tsena' }]));
     expect(result).toMatchObject({ status: 'pending', notificationMethod: 'callback' });
     expect(result.serverCorrelationId).toMatch(/^[0-9a-f-]{36}$/);
   });

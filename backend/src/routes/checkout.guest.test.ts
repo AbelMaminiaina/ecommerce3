@@ -22,7 +22,7 @@ import checkoutRouter from './checkout.js';
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
 
 process.env.PAYMENT_MVOLA_NUMBER = '034 00 000 00';
-process.env.PAYMENT_ACCOUNT_NAME = 'Tsena Pro';
+process.env.PAYMENT_ACCOUNT_NAME = 'Tsena';
 
 // Ce fichier a son propre limiteur de débit en mémoire (un module par fichier de test) : les tests
 // fonctionnels restent sous la limite de 10 commandes invitées par heure, le dernier la dépasse.

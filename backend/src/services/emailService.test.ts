@@ -37,7 +37,7 @@ const baseOrder = {
   payment: {
     methodLabel: 'MVola',
     number: '034 00 000 00',
-    accountName: 'Tsena Pro',
+    accountName: 'Tsena',
     totalToPay: 55000,
   },
   createdAt: new Date('2026-01-01T10:00:00Z'),

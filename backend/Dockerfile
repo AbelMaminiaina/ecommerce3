@@ -1,4 +1,4 @@
-# Backend Dockerfile - Tsena Pro
+# Backend Dockerfile - Tsena
 FROM node:20-alpine AS base
 
 # Install OpenSSL for Prisma
