@@ -26,9 +26,10 @@ interface OrderData {
   shippingCost: number;
   total: number;
   status: string;
-  // Instructions de paiement Mobile Money (le paiement est obligatoire pour toute commande)
+  // Instructions de paiement (le paiement est obligatoire pour toute commande)
   payment?: {
     methodLabel: string;
+    /** Numéro marchand Mobile Money ; vide pour un paiement en ligne (carte bancaire, PayPal) */
     number: string;
     accountName: string;
     /** Montant total à envoyer (somme des commandes d'un même panier) */
@@ -83,6 +84,21 @@ const BRAND_NAME = process.env.PLATFORM_NAME || 'Plateforme B2B';
 // Email admin pour notifications internes
 // Adresse e-mail du site (lue à chaque envoi) : ADMIN_EMAIL, sinon l'adresse de contact du site
 const adminEmail = () => process.env.ADMIN_EMAIL || 'savatry.milamina@gmail.com';
+
+// Les e-mails reprennent du texte saisi par les visiteurs et les vendeurs (nom, adresse, nom de produit, motif…) :
+// tout est échappé avant d'être inséré dans le HTML, sinon un nom comme « <a href=…> » deviendrait un vrai lien
+// dans un e-mail envoyé au nom de la plateforme. Les dates et les nombres sont laissés tels quels.
+const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+
+export function escapeHtmlDeep<T>(value: T): T {
+  if (typeof value === 'string') return escapeHtml(value) as T;
+  if (Array.isArray(value)) return value.map(escapeHtmlDeep) as T;
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, escapeHtmlDeep(v)])) as T;
+  }
+  return value;
+}
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-MG', {
@@ -202,7 +218,18 @@ function generateCustomerEmailHTML(order: OrderData): string {
       </div>
 
       <!-- Payment instructions -->
-      ${order.payment ? `
+      ${order.payment && !order.payment.number ? `
+      <div style="background-color: #fff7ed; border: 2px solid #f28b00; padding: 20px; margin-bottom: 25px; border-radius: 12px; text-align: center;">
+        <span style="font-size: 40px;">💳</span>
+        <h3 style="margin: 10px 0 5px 0; color: #9a3412;">Paiement par ${order.payment.methodLabel}</h3>
+        <p style="margin: 0; font-size: 28px; font-weight: bold; color: #9a3412;">${formatPrice(order.payment.totalToPay)}</p>
+        ${order.payment.expiresAt ? `<p style="margin: 8px 0 0 0; color: #b45309; font-size: 13px;">À régler avant le <strong>${formatDate(order.payment.expiresAt)}</strong> : passé ce délai, la commande est annulée automatiquement.</p>` : ''}
+        <p style="margin: 15px 0 0 0; color: #7c2d12; font-size: 13px;">
+          Le paiement se fait en ligne, sur la page sécurisée de ${order.payment.methodLabel === 'PayPal' ? 'PayPal' : 'notre prestataire'}.
+          S'il n'est pas terminé, reprenez-le depuis la page de votre commande (lien « Suivi de commande » du site).
+        </p>
+      </div>
+      ` : order.payment ? `
       <div style="background-color: #fff7ed; border: 2px solid #f28b00; padding: 20px; margin-bottom: 25px; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 15px;">
           <span style="font-size: 40px;">📱</span>
@@ -710,7 +737,7 @@ export async function sendOrderConfirmationEmail(order: OrderData): Promise<bool
     }
 
     const transporter = createTransporter();
-    const customerHTML = generateCustomerEmailHTML(order);
+    const customerHTML = generateCustomerEmailHTML(escapeHtmlDeep(order));
 
     const statusText = 'En attente de paiement';
 
@@ -741,7 +768,7 @@ export async function sendAdminNotificationEmail(order: OrderData): Promise<bool
     }
 
     const transporter = createTransporter();
-    const adminHTML = generateAdminNotificationHTML(order);
+    const adminHTML = generateAdminNotificationHTML(escapeHtmlDeep(order));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME} - Système" <${process.env.SMTP_USER}>`,
@@ -767,7 +794,7 @@ export async function sendOrderCancellationEmail(order: CancellationEmailData): 
     }
 
     const transporter = createTransporter();
-    const html = generateCancellationEmailHTML(order);
+    const html = generateCancellationEmailHTML(escapeHtmlDeep(order));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -793,7 +820,7 @@ export async function sendOrderShippedEmail(order: StatusUpdateEmailData): Promi
     }
 
     const transporter = createTransporter();
-    const html = generateShippedEmailHTML(order);
+    const html = generateShippedEmailHTML(escapeHtmlDeep(order));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -819,7 +846,7 @@ export async function sendOrderDeliveredEmail(order: StatusUpdateEmailData): Pro
     }
 
     const transporter = createTransporter();
-    const html = generateDeliveredEmailHTML(order);
+    const html = generateDeliveredEmailHTML(escapeHtmlDeep(order));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -845,7 +872,7 @@ export async function sendCompanyApprovedEmail(data: CompanyApprovedEmailData): 
     }
 
     const transporter = createTransporter();
-    const html = generateCompanyApprovedHTML(data);
+    const html = generateCompanyApprovedHTML(escapeHtmlDeep(data));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -870,7 +897,7 @@ export async function sendCompanyRejectedEmail(data: CompanyRejectedEmailData): 
     }
 
     const transporter = createTransporter();
-    const html = generateCompanyRejectedHTML(data);
+    const html = generateCompanyRejectedHTML(escapeHtmlDeep(data));
 
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -925,12 +952,13 @@ export async function sendPaymentConfirmedEmail(data: PaymentEmailData): Promise
       return false;
     }
     const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
     const html = paymentEmailShell(
       'Paiement confirmé',
       'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
       '✅',
-      `<p style="margin: 15px 0; color: #666;">Bonjour ${data.companyName}, nous avons bien reçu votre paiement de <strong>${formatPrice(data.totalAmount)}</strong>.</p>
-      <p style="margin: 15px 0; color: #333;">Commande${data.orderNumbers.length > 1 ? 's' : ''} : <strong>${data.orderNumbers.join(', ')}</strong>. Elle${data.orderNumbers.length > 1 ? 's sont' : ' est'} en cours de traitement.</p>`
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.companyName}, nous avons bien reçu votre paiement de <strong>${formatPrice(data.totalAmount)}</strong>.</p>
+      <p style="margin: 15px 0; color: #333;">Commande${safe.orderNumbers.length > 1 ? 's' : ''} : <strong>${safe.orderNumbers.join(', ')}</strong>. Elle${safe.orderNumbers.length > 1 ? 's sont' : ' est'} en cours de traitement.</p>`
     );
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
@@ -953,12 +981,13 @@ export async function sendPaymentRejectedEmail(data: PaymentRejectedEmailData): 
       return false;
     }
     const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
     const html = paymentEmailShell(
       'Paiement non validé',
       'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
       '⚠️',
-      `<p style="margin: 15px 0; color: #666;">Bonjour ${data.companyName}, nous n'avons pas pu valider votre paiement pour la commande ${data.orderNumbers.join(', ')} (${formatPrice(data.totalAmount)}).</p>
-      <p style="margin: 15px 0; color: #dc2626;"><strong>Motif : ${data.reason}</strong></p>
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.companyName}, nous n'avons pas pu valider votre paiement pour la commande ${safe.orderNumbers.join(', ')} (${formatPrice(data.totalAmount)}).</p>
+      <p style="margin: 15px 0; color: #dc2626;"><strong>Motif : ${safe.reason}</strong></p>
       <p style="margin: 15px 0; color: #333;">Vous pouvez saisir une nouvelle référence de transaction depuis la page de suivi de votre commande.</p>`
     );
     await transporter.sendMail({
@@ -992,12 +1021,13 @@ export async function sendPayoutPaidEmail(data: PayoutPaidEmailData): Promise<bo
       return false;
     }
     const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
     const html = paymentEmailShell(
       'Reversement effectué',
       'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
       '💸',
-      `<p style="margin: 15px 0; color: #666;">Bonjour ${data.companyName}, nous vous avons versé <strong>${formatPrice(data.amount)}</strong> par ${data.methodLabel} pour ${data.orderNumbers.length} commande${data.orderNumbers.length > 1 ? 's' : ''} livrée${data.orderNumbers.length > 1 ? 's' : ''}.</p>
-      <p style="margin: 15px 0; color: #333;">Commande${data.orderNumbers.length > 1 ? 's' : ''} : <strong>${data.orderNumbers.join(', ')}</strong><br>Commission de la plateforme retenue : ${formatPrice(data.commissionTotal)}<br>Référence de la transaction : <strong>${data.reference}</strong></p>`
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.companyName}, nous vous avons versé <strong>${formatPrice(data.amount)}</strong> par ${safe.methodLabel} pour ${safe.orderNumbers.length} commande${safe.orderNumbers.length > 1 ? 's' : ''} livrée${safe.orderNumbers.length > 1 ? 's' : ''}.</p>
+      <p style="margin: 15px 0; color: #333;">Commande${safe.orderNumbers.length > 1 ? 's' : ''} : <strong>${safe.orderNumbers.join(', ')}</strong><br>Commission de la plateforme retenue : ${formatPrice(data.commissionTotal)}<br>Référence de la transaction : <strong>${safe.reference}</strong></p>`
     );
     await transporter.sendMail({
       from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,

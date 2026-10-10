@@ -1,22 +1,33 @@
 import { fetchAPI } from './config';
 
-// Paiement Mobile Money vérifié manuellement : le client envoie le montant au numéro marchand puis
-// saisit la référence de sa transaction ; un administrateur confirme ou refuse.
-// Une carte bancaire nécessitera un prestataire de paiement (voir backend/src/lib/payments.ts).
+// Paiement d'une commande : Mobile Money (instantané par l'API de l'opérateur, ou manuel : le client envoie le
+// montant au numéro marchand puis saisit la référence de sa transaction, qu'un administrateur vérifie), carte
+// bancaire (Stripe) ou PayPal (paiement en ligne uniquement, sur la page du prestataire).
 
-export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money';
+export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal';
+
+/** Moyens de paiement en ligne uniquement (pas de numéro marchand ni de référence à saisir) */
+export const ONLINE_PAYMENT_METHODS: readonly PaymentMethodId[] = ['stripe', 'paypal'];
+
+/** Icône Bootstrap Icons d'un moyen de paiement */
+export const paymentMethodIcon = (id: PaymentMethodId | null | undefined): string =>
+  id === 'stripe' ? 'bi-credit-card' : id === 'paypal' ? 'bi-paypal' : 'bi-phone';
 export type PaymentStatus = 'awaiting' | 'submitted' | 'paid' | 'rejected';
 
 export interface PaymentMethodInfo {
   id: PaymentMethodId;
   label: string;
+  /** Numéro marchand (vide pour la carte bancaire et PayPal) */
   number: string;
   accountName: string;
-  /** Paiement instantané par l'API de l'opérateur (sinon : envoi manuel + référence) */
+  /** Paiement instantané par l'API du prestataire (sinon : envoi manuel + référence) */
   automatic: boolean;
+  /** Paiement manuel par référence possible (Mobile Money uniquement) */
+  manual: boolean;
 }
 
-// Demande de paiement automatique (MVola, Orange Money, Airtel Money) : le site vérifie le résultat auprès de l'opérateur
+// Demande de paiement automatique (MVola, Orange Money, Airtel Money, Stripe, PayPal) : le site vérifie le résultat
+// auprès du prestataire
 export type PaymentAttemptStatus = 'pending' | 'completed' | 'failed' | 'review';
 
 export interface PaymentAttempt {
@@ -26,17 +37,19 @@ export interface PaymentAttempt {
   failureReason: string | null;
   /** Numéro du client (vide pour Orange Money : il le saisit sur la page d'Orange) */
   payerPhone: string;
-  /** Page de paiement de l'opérateur (Orange Money), tant que la demande est en cours */
+  /** Page de paiement du prestataire (Orange Money, Stripe, PayPal), tant que la demande est en cours */
   paymentUrl: string | null;
   createdAt: string;
 }
 
 // Comment se déroule le paiement instantané d'un panier :
 //  - push : le client donne son numéro et confirme la demande sur son téléphone (MVola, Airtel Money) ;
-//  - redirect : le client est envoyé sur la page de paiement de l'opérateur (Orange Money).
+//  - redirect : le client est envoyé sur la page de paiement du prestataire (Orange Money, Stripe, PayPal).
 export interface InstantPayment {
   provider: PaymentMethodId;
   label: string;
+  /** Mobile Money, ou paiement en ligne uniquement (carte bancaire, PayPal) */
+  kind: 'mobile_money' | 'online';
   flow: 'push' | 'redirect';
   /** Préfixes de numéro acceptés, pour l'affichage (« 034 ou 038 ») */
   phonePrefixes: string;
@@ -59,6 +72,8 @@ export interface PaymentSummary {
   cancelReason: string | null;
   method: PaymentMethodId | null;
   methodLabel: string | null;
+  /** Paiement manuel par référence possible (Mobile Money) ; faux pour la carte bancaire et PayPal */
+  manual: boolean;
   number: string | null;
   accountName: string | null;
   totalAmount: number;

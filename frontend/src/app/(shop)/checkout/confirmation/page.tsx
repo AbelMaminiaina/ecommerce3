@@ -48,8 +48,8 @@ function ConfirmationContent() {
                 <span className="confirm-icon"><i className="bi bi-check-lg"></i></span>
                 <h2>Commande enregistrée !</h2>
                 <p>
-                  Il ne reste qu&apos;à régler par Mobile Money : votre commande sera traitée dès que votre paiement aura
-                  été vérifié. Les instructions vous ont aussi été envoyées par e-mail.
+                  Il ne reste qu&apos;à la régler : votre commande sera traitée dès que votre paiement aura été vérifié.
+                  Les instructions vous ont aussi été envoyées par e-mail.
                 </p>
               </div>
 

@@ -4,7 +4,7 @@ import type { Order, PaymentStatus } from '@prisma/client';
 import prisma from '../lib/prisma.js';
 import { authenticate, optionalAuthenticate, requirePlatformAdmin } from '../middleware/auth.js';
 import { rateLimit } from '../lib/rateLimit.js';
-import { getPaymentMethod, getPaymentMethods, paymentMethodLabel } from '../lib/payments.js';
+import { acceptsManualPayment, getPaymentMethod, getPaymentMethods, paymentMethodLabel } from '../lib/payments.js';
 import { orderExpiresAt } from '../lib/orderExpiry.js';
 import { expireUnpaidOrders } from '../services/orderExpiry.js';
 import { sendPaymentRejectedEmail } from '../services/emailService.js';
@@ -18,7 +18,8 @@ import { presentedAttempt } from '../lib/attemptPresentation.js';
 const router = Router();
 
 // Paiement Mobile Money vérifié manuellement : le client envoie l'argent au numéro marchand puis
-// transmet la référence de la transaction ; un administrateur confirme ou refuse.
+// transmet la référence de la transaction ; un administrateur confirme ou refuse. (La carte bancaire et PayPal se
+// paient uniquement en ligne : voir routes/autoPayments.ts.)
 // Toutes les commandes d'un même panier (checkoutGroup) sont réglées par un seul paiement.
 
 const paymentLimiter = rateLimit({
@@ -70,6 +71,7 @@ function summarize(orders: GroupOrder[]) {
     instant: instant && {
       provider: instant.id,
       label: instant.label,
+      kind: instant.kind,
       flow: instant.flow,
       phonePrefixes: instant.phonePrefixes,
       phonePlaceholder: instant.phonePlaceholder,
@@ -79,6 +81,8 @@ function summarize(orders: GroupOrder[]) {
     cancelReason: active.length === 0 ? orders.find((o) => o.cancelReason)?.cancelReason ?? null : null,
     method: orders[0].paymentMethod,
     methodLabel: paymentMethodLabel(orders[0].paymentMethod),
+    // Paiement manuel par référence possible (Mobile Money) ; la carte bancaire et PayPal se paient en ligne uniquement
+    manual: acceptsManualPayment(orders[0].paymentMethod),
     // Numéro marchand toujours issu de la configuration courante
     number: method?.number ?? null,
     accountName: method?.accountName ?? null,
@@ -136,7 +140,7 @@ router.get('/status', optionalAuthenticate, paymentLimiter, async (req: Request,
             status,
             failureReason,
             payerPhone,
-            // Page de paiement de l'opérateur (Orange Money) : seulement tant que la demande est en cours
+            // Page de paiement du prestataire (Orange Money, Stripe, PayPal) : seulement tant que la demande est en cours
             paymentUrl: status === 'pending' ? paymentUrl : null,
             createdAt,
           }))(presentedAttempt(attempt, group))
@@ -156,6 +160,13 @@ router.post('/submit', optionalAuthenticate, paymentLimiter, async (req: Request
     const orders = await loadGroup(data.orderNumber);
     if (!orders || !canAccess(req, orders[0], data.email)) {
       return res.status(404).json({ success: false, error: 'Aucune commande ne correspond à ces informations' });
+    }
+
+    if (!acceptsManualPayment(orders[0].paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        error: `Le paiement par ${orders[0].paymentMethod === 'stripe' ? 'carte bancaire' : paymentMethodLabel(orders[0].paymentMethod)} se fait uniquement en ligne`,
+      });
     }
 
     const active = orders.filter((o) => o.status !== 'cancelled');

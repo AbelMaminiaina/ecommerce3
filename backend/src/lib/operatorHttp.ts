@@ -1,4 +1,4 @@
-// Briques communes aux clients d'API des opérateurs Mobile Money (MVola, Orange Money, Airtel Money).
+// Briques communes aux clients d'API des prestataires de paiement (MVola, Orange Money, Airtel Money, Stripe, PayPal).
 
 export class OperatorError extends Error {
   constructor(
@@ -43,7 +43,13 @@ export async function operatorFetch(
   }
   if (!res.ok) {
     const detail =
-      data?.ErrorDescription ?? data?.errorDescription ?? data?.error_description ?? data?.description ?? data?.message ?? data?.error;
+      data?.error?.message /* Stripe */ ??
+      data?.ErrorDescription ??
+      data?.errorDescription ??
+      data?.error_description ??
+      data?.description ??
+      data?.message ??
+      (typeof data?.error === 'string' ? data.error : undefined);
     throw new OperatorError(
       `${label} a répondu ${res.status}${detail ? ` : ${String(detail).slice(0, 200)}` : ''}`,
       res.status,

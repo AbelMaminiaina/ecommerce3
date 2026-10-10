@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { formatPrice } from '@/lib/utils';
 import { usePayment, isPayerNumber, REFERENCE_PATTERN } from '@/hooks/usePayment';
-import { PAYMENT_STATUS_LABELS } from '@/lib/api/payments';
+import { PAYMENT_STATUS_LABELS, paymentMethodIcon } from '@/lib/api/payments';
 import { useToast } from '@/components/shop/Toast';
 
 interface PaymentPanelProps {
@@ -32,11 +32,15 @@ const STATUS_STYLE = {
 // Code USSD pour retrouver la demande depuis le téléphone (quand la notification n'apparaît pas)
 const USSD_CODE: Partial<Record<string, string>> = { mvola: '#111#' };
 
-// Paiement Mobile Money d'une commande (Bootstrap, thème ShopWise).
-//  - « instantané » quand l'API de l'opérateur est configurée : MVola et Airtel Money (le client saisit son numéro et
-//    confirme sur son téléphone) ou Orange Money (le client paie sur la page d'Orange) ; la page se met à jour toute
-//    seule à la confirmation ;
-//  - sinon (ou au choix du client) : envoi manuel au numéro marchand puis saisie de la référence de transaction.
+// « d’Orange Money », « de Stripe », « de PayPal »
+const ofLabel = (label: string) => (/^[aeiouyéè]/i.test(label) ? `d’${label}` : `de ${label}`);
+
+// Paiement d'une commande (Bootstrap, thème ShopWise).
+//  - « instantané » quand l'API du prestataire est configurée : MVola et Airtel Money (le client saisit son numéro et
+//    confirme sur son téléphone), Orange Money, carte bancaire (Stripe) ou PayPal (le client paie sur la page du
+//    prestataire) ; la page se met à jour toute seule à la confirmation ;
+//  - Mobile Money uniquement, sinon (ou au choix du client) : envoi manuel au numéro marchand puis saisie de la
+//    référence de transaction. La carte bancaire et PayPal n'ont pas de paiement manuel.
 export function PaymentPanel({ orderNumber, email, token, enabled = true }: PaymentPanelProps) {
   const { addToast } = useToast();
   const { summary, loading, submitting, error, refresh, submit, instant } = usePayment(orderNumber, { email, token, enabled });
@@ -70,7 +74,14 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
   const isPush = instant.flow === 'push';
   const instantPhoneValid = instant.provider ? isPayerNumber(instant.provider, instantPhone) : false;
   const canStart = !instant.starting && (isPush ? instantPhoneValid : true);
-  const showAuto = instant.available && (mode === 'auto' || instant.waiting || instant.inReview);
+  const online = !summary.manual;
+  const showAuto = instant.available && (online || mode === 'auto' || instant.waiting || instant.inReview);
+  const title =
+    summary.method === 'stripe'
+      ? 'Paiement par carte bancaire'
+      : online
+        ? `Paiement par ${summary.methodLabel}`
+        : `Paiement ${summary.methodLabel ?? 'Mobile Money'}`;
   // Référence « MVOLA:… », « ORANGE_MONEY:… » = paiement lancé par l'API (pas une référence saisie par le client)
   const manualReferenceSent = summary.paymentStatus === 'submitted' && !/^[A-Z_]+:/.test(summary.reference ?? '');
   const ussd = instant.provider ? USSD_CODE[instant.provider] : undefined;
@@ -99,7 +110,8 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
     <div className="border rounded p-4 mb-4">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h4 className="mb-0">
-          <i className="bi bi-phone text-primary me-2"></i>Paiement {summary.methodLabel ?? 'Mobile Money'}
+          <i className={`bi ${paymentMethodIcon(summary.method)} text-primary me-2`}></i>
+          {title}
         </h4>
         <span className={`badge rounded-pill py-2 px-3 ${style.badge}`}>
           <i className={`bi ${style.icon} me-1`}></i>
@@ -124,10 +136,10 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
       {summary.demo && !cancelledOnly && summary.paymentStatus !== 'paid' && (
         <div className="alert alert-warning small" role="note" data-testid="demo-banner">
           <i className="bi bi-bug me-2"></i>
-          <strong>Paiement de démonstration.</strong> MVola, Orange Money et Airtel Money sont simulés : aucun argent n&apos;est
-          débité. Avec MVola ou Airtel Money, tout numéro valide « confirme » après quelques secondes ; pour simuler un refus,
-          utilisez le 034 35 000 04 (MVola) ou le 033 35 000 04 (Airtel Money). Avec Orange Money, choisissez « Payer » ou
-          « Annuler » sur la page simulée.
+          <strong>Paiement de démonstration.</strong> MVola, Orange Money, Airtel Money, la carte bancaire et PayPal sont
+          simulés : aucun argent n&apos;est débité. Avec MVola ou Airtel Money, tout numéro valide « confirme » après quelques
+          secondes ; pour simuler un refus, utilisez le 034 35 000 04 (MVola) ou le 033 35 000 04 (Airtel Money). Avec Orange
+          Money, la carte bancaire ou PayPal, choisissez « Payer » ou « Annuler » sur la page simulée.
         </div>
       )}
 
@@ -145,7 +157,11 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
             <div className="alert alert-danger" role="alert">
               <strong>Nous n&apos;avons pas pu valider votre paiement.</strong>
               {summary.rejectionReason && <div>Motif : {summary.rejectionReason}</div>}
-              <div>Vérifiez votre transaction puis saisissez de nouveau la référence ci-dessous.</div>
+              <div>
+                {online
+                  ? 'Vous pouvez relancer le paiement ci-dessous.'
+                  : 'Vérifiez votre transaction puis saisissez de nouveau la référence ci-dessous.'}
+              </div>
             </div>
           )}
 
@@ -187,10 +203,10 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
               ) : (
                 <div className="bg-light rounded p-4 mb-3 text-center" role="status" aria-live="polite">
                   <div className="spinner-border text-primary mb-3" aria-hidden="true"></div>
-                  <h5 className="text-dark">Paiement en cours chez {instant.label}</h5>
+                  <h5 className="text-dark">Paiement en cours sur {instant.label}</h5>
                   <p className="mb-2">
                     Terminez le paiement de <strong className="text-primary">{formatPrice(summary.totalAmount)}</strong> sur la
-                    page sécurisée d&apos;{instant.label}.
+                    page sécurisée {ofLabel(instant.label)}.
                   </p>
                   <small className="d-block mb-3">Cette page se met à jour toute seule dès que le paiement est confirmé.</small>
                   {instant.paymentUrl && (
@@ -207,7 +223,8 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
             ) : (
               <form onSubmit={handleInstant} className="bg-light rounded p-4 mb-3">
                 <p className="text-dark fw-bold mb-1">
-                  <i className="bi bi-lightning-charge-fill text-primary me-2"></i>Payer maintenant avec {instant.label}
+                  <i className={`bi ${online ? paymentMethodIcon(summary.method) : 'bi-lightning-charge-fill'} text-primary me-2`}></i>
+                  {summary.method === 'stripe' ? 'Payer maintenant par carte bancaire' : `Payer maintenant avec ${instant.label}`}
                 </p>
                 <p className="small mb-3">
                   {isPush ? (
@@ -216,9 +233,20 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
                       <strong>{formatPrice(summary.totalAmount)}</strong> à confirmer avec votre code secret. Aucune référence à
                       recopier.
                     </>
+                  ) : summary.method === 'stripe' ? (
+                    <>
+                      Vous serez redirigé vers la page de paiement sécurisée de Stripe pour payer{' '}
+                      <strong>{formatPrice(summary.totalAmount)}</strong> par carte bancaire (Visa, Mastercard…), puis ramené ici.
+                    </>
+                  ) : summary.method === 'paypal' ? (
+                    <>
+                      Vous serez redirigé vers PayPal pour payer <strong>{formatPrice(summary.totalAmount)}</strong> avec votre
+                      compte PayPal ou une carte, puis ramené ici. PayPal ne gérant pas l&apos;Ariary, le montant vous y est
+                      présenté converti en devise.
+                    </>
                   ) : (
                     <>
-                      Vous serez redirigé vers la page sécurisée d&apos;{instant.label} pour payer{' '}
+                      Vous serez redirigé vers la page sécurisée {ofLabel(instant.label)} pour payer{' '}
                       <strong>{formatPrice(summary.totalAmount)}</strong> avec votre numéro et votre code secret, puis ramené ici.
                       Aucune référence à recopier.
                     </>
@@ -258,15 +286,28 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
                 ) : (
                   <button type="submit" className="btn btn-primary rounded-pill py-3 px-4" disabled={!canStart}>
                     {instant.starting && <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>}
-                    Payer {formatPrice(summary.totalAmount)} avec {instant.label}
+                    {summary.method === 'stripe'
+                      ? `Payer ${formatPrice(summary.totalAmount)} par carte`
+                      : `Payer ${formatPrice(summary.totalAmount)} avec ${instant.label}`}
                   </button>
                 )}
                 {instant.error && <div className="alert alert-danger mt-3 mb-0" role="alert">{instant.error}</div>}
-                <button type="button" className="btn btn-link p-0 mt-3 text-decoration-none d-block" onClick={() => setMode('manual')}>
-                  Payer autrement : envoyer l&apos;argent moi-même et saisir la référence
-                </button>
+                {!online && (
+                  <button type="button" className="btn btn-link p-0 mt-3 text-decoration-none d-block" onClick={() => setMode('manual')}>
+                    Payer autrement : envoyer l&apos;argent moi-même et saisir la référence
+                  </button>
+                )}
               </form>
             )
+          ) : online ? (
+            // Carte bancaire / PayPal sans prestataire joignable : pas de paiement manuel possible
+            <div className="alert alert-warning mb-0" role="alert">
+              Le paiement par {summary.method === 'stripe' ? 'carte bancaire' : summary.methodLabel} est momentanément
+              indisponible. Réessayez un peu plus tard ou contactez-nous.
+              <button type="button" className="btn btn-link p-0 ms-1 align-baseline" onClick={refresh} disabled={loading}>
+                Actualiser
+              </button>
+            </div>
           ) : (
             <>
               {instant.available && (

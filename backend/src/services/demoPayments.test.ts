@@ -5,6 +5,8 @@ import { DEMO_PATH, isDemoPayments, requestOrigin, setupDemoPayments } from './d
 import { getMvolaClient } from '../lib/mvola.js';
 import { getOrangeClient } from '../lib/orangeMoney.js';
 import { getAirtelClient } from '../lib/airtelMoney.js';
+import { getStripeClient } from '../lib/stripe.js';
+import { getPaypalClient } from '../lib/paypal.js';
 import { getAutomaticOperator } from '../lib/operators.js';
 import { getPaymentMethods } from '../lib/payments.js';
 
@@ -13,6 +15,8 @@ const KEYS = [
   'MVOLA_CONSUMER_KEY', 'MVOLA_CONSUMER_SECRET', 'MVOLA_MERCHANT_NUMBER', 'MVOLA_API_BASE_URL',
   'ORANGE_MONEY_CLIENT_ID', 'ORANGE_MONEY_CLIENT_SECRET', 'ORANGE_MONEY_MERCHANT_KEY', 'ORANGE_MONEY_API_BASE_URL', 'ORANGE_MONEY_NOTIF_URL',
   'AIRTEL_MONEY_CLIENT_ID', 'AIRTEL_MONEY_CLIENT_SECRET', 'AIRTEL_MONEY_API_BASE_URL',
+  'STRIPE_SECRET_KEY', 'STRIPE_API_BASE_URL', 'STRIPE_CURRENCY', 'STRIPE_MGA_RATE',
+  'PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_API_BASE_URL', 'PAYPAL_MGA_RATE', 'PAYPAL_CURRENCY',
   'PAYMENT_MVOLA_NUMBER', 'PAYMENT_ORANGE_MONEY_NUMBER', 'PAYMENT_AIRTEL_MONEY_NUMBER',
 ];
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
@@ -48,6 +52,8 @@ describe('setupDemoPayments', () => {
     expect(getMvolaClient()).toBeNull();
     expect(getOrangeClient()).toBeNull();
     expect(getAirtelClient()).toBeNull();
+    expect(getStripeClient()).toBeNull();
+    expect(getPaypalClient()).toBeNull();
   });
 
   it.each(['1', 'yes', 'TRUE', 'false', ''])('n’active pas le mode pour DEMO_PAYMENTS=%j (seul « true » exact)', async (value) => {
@@ -58,7 +64,7 @@ describe('setupDemoPayments', () => {
     expect(isDemoPayments()).toBe(false);
   });
 
-  it.each(['MVOLA_CONSUMER_KEY', 'ORANGE_MONEY_CLIENT_ID', 'AIRTEL_MONEY_CLIENT_ID'])(
+  it.each(['MVOLA_CONSUMER_KEY', 'ORANGE_MONEY_CLIENT_ID', 'AIRTEL_MONEY_CLIENT_ID', 'STRIPE_SECRET_KEY', 'PAYPAL_CLIENT_ID'])(
     'refuse de s’activer quand de vrais identifiants existent (%s) : jamais de faux paiement sur un vrai site',
     async (key) => {
       for (const k of KEYS) delete process.env[k];
@@ -74,7 +80,7 @@ describe('setupDemoPayments', () => {
     }
   );
 
-  it('active les trois opérateurs contre les simulateurs montés, et propose les trois moyens de paiement', async () => {
+  it('active tous les prestataires contre les simulateurs montés, et propose tous les moyens de paiement', async () => {
     for (const k of KEYS) delete process.env[k];
     process.env.DEMO_PAYMENTS = 'true';
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -82,11 +88,13 @@ describe('setupDemoPayments', () => {
 
     expect(setupDemoPayments(app, port)).toBe(true);
     expect(isDemoPayments()).toBe(true);
-    for (const id of ['mvola', 'orange_money', 'airtel_money']) expect(getAutomaticOperator(id)).not.toBeNull();
+    for (const id of ['mvola', 'orange_money', 'airtel_money', 'stripe', 'paypal']) expect(getAutomaticOperator(id)).not.toBeNull();
     expect(getPaymentMethods().map((m) => [m.id, m.automatic])).toEqual([
       ['mvola', true],
       ['orange_money', true],
       ['airtel_money', true],
+      ['stripe', true],
+      ['paypal', true],
     ]);
   });
 
@@ -168,6 +176,36 @@ describe('setupDemoPayments', () => {
       const cancelled = await fetch(`${url}${pagePath}/failed`, { method: 'POST', redirect: 'manual' });
       expect(cancelled.headers.get('location')).toBe('https://d.example/ko');
       expect((await client.getStatus({ orderId: 'o2', amount: 5000, payToken: session.payToken })).status).toBe('failed');
+    });
+
+    it('carte bancaire (Stripe) : page simulée sur l’adresse publique, le paiement aboutit', async () => {
+      const { url } = await enable();
+      const client = getStripeClient()!;
+      const session = await client.createSession({
+        reference: 'a1',
+        amount: 5000,
+        description: 'Commande',
+        successUrl: 'https://demo-public.example/checkout/confirmation?order=ORD-1&paiement=retour',
+        cancelUrl: 'https://demo-public.example/checkout/confirmation?order=ORD-1&paiement=annule',
+      });
+      expect(session.url).toMatch(new RegExp(`^https://demo-public\\.example${DEMO_PATH}/stripe/pay/cs_test_`));
+
+      const pagePath = new URL(session.url).pathname;
+      expect(await (await fetch(`${url}${pagePath}`)).text()).toContain(`action="${pagePath}/success"`);
+      const paid = await fetch(`${url}${pagePath}/success`, { method: 'POST', redirect: 'manual' });
+      expect(paid.headers.get('location')).toBe('https://demo-public.example/checkout/confirmation?order=ORD-1&paiement=retour');
+      expect((await client.getSession(session.sessionId)).status).toBe('completed');
+    });
+
+    it('PayPal : approbation sur la page simulée, puis encaissement par le serveur', async () => {
+      const { url } = await enable();
+      const client = getPaypalClient()!;
+      const order = await client.createOrder({ reference: 'a2', amount: 100, description: 'Commande', returnUrl: 'https://d.example/ok', cancelUrl: 'https://d.example/ko' });
+      const pagePath = new URL(order.approveUrl).pathname;
+      const approved = await fetch(`${url}${pagePath}/approve`, { method: 'POST', redirect: 'manual' });
+      expect(approved.headers.get('location')).toMatch(/^https:\/\/d\.example\/ok\?token=/);
+      expect((await client.getOrder(order.orderId)).orderStatus).toBe('APPROVED');
+      expect((await client.capture(order.orderId)).status).toBe('completed');
     });
 
     it('n’enregistre pas l’historique des requêtes (serveur longue durée)', async () => {

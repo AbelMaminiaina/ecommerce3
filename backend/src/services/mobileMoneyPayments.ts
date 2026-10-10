@@ -5,12 +5,14 @@ import { OPERATORS, getAutomaticOperator, getOperator, type OperatorAdapter, typ
 import { getMvolaConfig } from '../lib/mvola.js';
 import { getOrangeConfig } from '../lib/orangeMoney.js';
 import { getAirtelConfig } from '../lib/airtelMoney.js';
+import { getStripeConfig } from '../lib/stripe.js';
+import { getPaypalConfig } from '../lib/paypal.js';
 import { normalizeMalagasyMobile } from '../lib/phone.js';
 import type { GroupOrder } from '../lib/paymentGroup.js';
 import { markOrdersPaid, type BuyerOrder } from './paymentSettlement.js';
 
-// Paiement automatique par l'API d'un opérateur Mobile Money (MVola, Orange Money, Airtel Money) : le site vérifie
-// le résultat AUPRÈS DE L'OPÉRATEUR (requête authentifiée) puis passe les commandes en « payées ».
+// Paiement automatique par l'API d'un prestataire (MVola, Orange Money, Airtel Money, Stripe, PayPal) : le site
+// vérifie le résultat AUPRÈS DU PRESTATAIRE (requête authentifiée) puis passe les commandes en « payées ».
 //
 // Règles de sécurité (les mêmes pour tous les opérateurs) :
 //  - on ne se fie jamais au navigateur du client ni au message de rappel (callback) de l'opérateur : ils ne servent
@@ -36,6 +38,9 @@ const RECONCILE_INTERVAL_MS = 30 * 1000;
 
 const sum = (orders: { total: number }[]) => orders.reduce((acc, o) => acc + o.total, 0);
 const isPayable = (o: Order) => o.status !== 'cancelled' && o.paymentStatus !== 'paid';
+// Repli proposé au client quand le paiement instantané échoue (la carte et PayPal n'ont pas de paiement manuel)
+const fallbackHint = (operator: OperatorAdapter) =>
+  operator.kind === 'mobile_money' ? ' ou payez manuellement avec une référence' : '';
 const timeoutReason = (operator: OperatorAdapter) => `${TIMEOUT_REASON_PREFIX} (${Math.round(operator.pendingTtlMs / 60_000)} min)`;
 
 // Adresse publique du site (retour du client après une page de paiement externe)
@@ -169,7 +174,7 @@ export async function initiateAutoPayment(params: {
       params.anchor.paymentMethod && getOperator(params.anchor.paymentMethod) ? 503 : 400,
       params.anchor.paymentMethod && getOperator(params.anchor.paymentMethod)
         ? 'Le paiement automatique n’est pas disponible pour le moment.'
-        : 'Cette commande n’est pas à payer par Mobile Money.'
+        : 'Cette commande n’est pas à payer en ligne.'
     );
   }
 
@@ -204,7 +209,7 @@ export async function initiateAutoPayment(params: {
     payer ? prisma.paymentAttempt.count({ where: { payerPhone: payer, createdAt: { gte: since } } }) : Promise.resolve(0),
   ]);
   if (byOrder >= MAX_ATTEMPTS_PER_ORDER_PER_HOUR || byPhone >= MAX_ATTEMPTS_PER_PHONE_PER_HOUR) {
-    throw new PaymentHttpError(429, 'Trop de tentatives de paiement. Réessayez dans une heure ou payez manuellement avec une référence.');
+    throw new PaymentHttpError(429, `Trop de tentatives de paiement. Réessayez dans une heure${fallbackHint(operator)}.`);
   }
 
   const amount = sum(payable);
@@ -239,8 +244,10 @@ export async function initiateAutoPayment(params: {
     throw new PaymentHttpError(
       retriable ? 503 : 502,
       retriable
-        ? `${operator.label} est momentanément indisponible. Réessayez dans un instant ou payez manuellement avec une référence.`
-        : `${operator.label} a refusé la demande de paiement.${payer ? ' Vérifiez votre numéro ou' : ''} Vous pouvez payer manuellement avec une référence.`
+        ? `${operator.label} est momentanément indisponible. Réessayez dans un instant${fallbackHint(operator)}.`
+        : operator.kind === 'mobile_money'
+          ? `${operator.label} a refusé la demande de paiement.${payer ? ' Vérifiez votre numéro ou' : ''} Vous pouvez payer manuellement avec une référence.`
+          : `${operator.label} a refusé la demande de paiement. Réessayez dans un instant.`
     );
   }
 
@@ -251,6 +258,8 @@ export async function initiateAutoPayment(params: {
       transactionId: result.transactionId ?? null,
       paymentUrl: result.paymentUrl ?? null,
       notifToken: result.notifToken ?? null,
+      providerAmount: result.charged?.amount ?? null,
+      providerCurrency: result.charged?.currency ?? null,
       providerStatus: result.status,
     },
   });
@@ -315,7 +324,8 @@ export async function reconcilePendingAttempts(): Promise<number> {
     const operator = operatorOf(attempt);
     if (!operator || !operator.isConfigured()) continue;
     try {
-      const status = await operator.getStatus(attempt);
+      // Lecture seule : une demande abandonnée n'est jamais encaissée après coup (PayPal capture lors de la vérification)
+      const status = await operator.getStatus(attempt, { readOnly: true });
       if (status.status === 'completed') {
         await markReview(attempt, `${operator.label} indique un paiement confirmé APRÈS l’abandon de la demande : à vérifier et confirmer à la main`);
       }
@@ -327,12 +337,20 @@ export async function reconcilePendingAttempts(): Promise<number> {
 }
 
 export function startAutoPaymentReconcileJob(): void {
-  const sandboxOf = (id: OperatorId) => (id === 'mvola' ? getMvolaConfig() : id === 'orange_money' ? getOrangeConfig() : getAirtelConfig());
+  const configs: Record<OperatorId, () => { sandbox: boolean; baseUrl: string } | null> = {
+    mvola: getMvolaConfig,
+    orange_money: getOrangeConfig,
+    airtel_money: getAirtelConfig,
+    stripe: getStripeConfig,
+    paypal: getPaypalConfig,
+  };
   let enabled = 0;
   for (const operator of Object.values(OPERATORS)) {
-    const config = sandboxOf(operator.id);
+    const config = configs[operator.id]();
     if (!config) {
-      console.log(`Paiement ${operator.label} automatique : non configuré (paiement manuel par référence uniquement)`);
+      console.log(
+        `Paiement ${operator.label} automatique : non configuré${operator.kind === 'mobile_money' ? ' (paiement manuel par référence uniquement)' : ' (moyen de paiement non proposé)'}`
+      );
       continue;
     }
     enabled++;

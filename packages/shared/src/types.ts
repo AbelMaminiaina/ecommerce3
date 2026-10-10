@@ -203,18 +203,21 @@ export interface CheckoutResponse {
   orders?: { id: string; orderNumber: string; status: string; total: number; sellerName: string | null }[];
 }
 
-// ---------- Paiement Mobile Money ----------
+// ---------- Paiement (Mobile Money, carte bancaire, PayPal) ----------
 
-export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money';
+export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal';
 export type PaymentStatus = 'awaiting' | 'submitted' | 'paid' | 'rejected';
 export type PaymentAttemptStatus = 'pending' | 'completed' | 'failed' | 'review';
 
 export interface PaymentMethodInfo {
   id: PaymentMethodId;
   label: string;
+  /** Numéro marchand (vide pour la carte bancaire et PayPal) */
   number: string;
   accountName: string;
   automatic: boolean;
+  /** Paiement manuel par référence possible (Mobile Money uniquement) */
+  manual: boolean;
 }
 
 export interface PaymentAttempt {
@@ -223,7 +226,7 @@ export interface PaymentAttempt {
   status: PaymentAttemptStatus;
   failureReason: string | null;
   payerPhone: string;
-  /** Page de paiement de l'opérateur (Orange Money), tant que la demande est en cours */
+  /** Page de paiement du prestataire (Orange Money, Stripe, PayPal), tant que la demande est en cours */
   paymentUrl: string | null;
   createdAt: string;
 }
@@ -231,7 +234,8 @@ export interface PaymentAttempt {
 export interface InstantPayment {
   provider: PaymentMethodId;
   label: string;
-  /** push : confirmation sur le téléphone (MVola, Airtel) ; redirect : page de l'opérateur (Orange) */
+  kind: 'mobile_money' | 'online';
+  /** push : confirmation sur le téléphone (MVola, Airtel) ; redirect : page du prestataire (Orange, Stripe, PayPal) */
   flow: 'push' | 'redirect';
   phonePrefixes: string;
   phonePlaceholder: string;
@@ -247,6 +251,8 @@ export interface PaymentSummary {
   cancelReason: string | null;
   method: PaymentMethodId | null;
   methodLabel: string | null;
+  /** Paiement manuel par référence possible (Mobile Money) */
+  manual: boolean;
   number: string | null;
   accountName: string | null;
   totalAmount: number;

@@ -57,12 +57,14 @@ enum UserRole {
   customer // Particulier (achat au détail, sans entreprise)
 }
 
-// Moyen de paiement d'une commande : Mobile Money (paiement vérifié manuellement).
-// Une carte bancaire nécessitera un prestataire de paiement : à ajouter ici et dans lib/payments.ts.
+// Moyen de paiement d'une commande : Mobile Money (paiement automatique ou vérifié manuellement), carte bancaire
+// (Stripe) ou PayPal (paiement en ligne uniquement, sur la page du prestataire).
 enum PaymentMethod {
   mvola
   orange_money
   airtel_money
+  stripe
+  paypal
 }
 
 // Cycle de paiement d'une commande : en attente du paiement du client -> référence de transaction
@@ -433,16 +435,20 @@ model Payout {
 // commandes encore à payer au moment de la demande. `orderId` = commande de référence du panier.
 model PaymentAttempt {
   id                  String               @id @default(uuid())
-  provider            String // 'mvola' | 'orange_money' | 'airtel_money'
+  provider            String // 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal'
   orderId             String
   order               Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
   checkoutGroup       String?
   amount              Int
+  // Montant réellement demandé au prestataire, en unités mineures de sa devise (ex. centimes d'euro pour PayPal) :
+  // recoupé avec le montant encaissé avant toute validation. Null pour le Mobile Money (montant = `amount` en Ariary).
+  providerAmount      Int?
+  providerCurrency    String?
   payerPhone          String // numéro du client (vide pour Orange Money : il le saisit chez l'opérateur)
   status              PaymentAttemptStatus @default(pending)
-  serverCorrelationId String?              @unique // identifiant de suivi chez l'opérateur (MVola, Airtel) ou pay_token (Orange)
+  serverCorrelationId String?              @unique // identifiant de suivi chez l'opérateur (MVola, Airtel), pay_token (Orange), session Stripe ou commande PayPal
   transactionId       String? // identifiant de la transaction chez l'opérateur (une fois payée)
-  paymentUrl          String? // page de paiement de l'opérateur où envoyer le client (Orange Money)
+  paymentUrl          String? // page de paiement où envoyer le client (Orange Money, Stripe, PayPal)
   notifToken          String?              @unique // jeton de notification de l'opérateur (Orange Money)
   providerStatus      String?
   failureReason       String?

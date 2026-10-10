@@ -15,7 +15,8 @@ import {
 export const REFERENCE_PATTERN = /^[A-Za-z0-9._\-/ ]{4,60}$/;
 
 // Numéros de mobile malgaches par opérateur : MVola (034, 038), Orange Money (032, 037), Airtel Money (033)
-const PHONE_PATTERNS: Record<PaymentMethodId, RegExp> = {
+// (la carte bancaire et PayPal ne demandent pas de numéro)
+const PHONE_PATTERNS: Partial<Record<PaymentMethodId, RegExp>> = {
   mvola: /^03[48]\d{7}$/,
   orange_money: /^03[27]\d{7}$/,
   airtel_money: /^033\d{7}$/,
@@ -27,7 +28,7 @@ export function isPayerNumber(provider: PaymentMethodId, input: string): boolean
   if (digits.startsWith('+261')) digits = '0' + digits.slice(4);
   else if (digits.startsWith('00261')) digits = '0' + digits.slice(5);
   else if (digits.startsWith('261') && digits.length === 12) digits = '0' + digits.slice(3);
-  return PHONE_PATTERNS[provider].test(digits);
+  return PHONE_PATTERNS[provider]?.test(digits) ?? false;
 }
 
 export const isMvolaNumber = (input: string) => isPayerNumber('mvola', input);
@@ -38,7 +39,7 @@ export function withFinalPeriod(text: string): string {
 }
 
 const POLL_INTERVAL_MS = 4000;
-const POLL_MAX_MS = 31 * 60 * 1000; // la demande expire côté serveur au bout de 15 min (30 min pour Orange Money)
+const POLL_MAX_MS = 36 * 60 * 1000; // la demande expire côté serveur au bout de 15 min (30 à 35 min sur la page d'un prestataire)
 
 // E-mail du visiteur sans compte, gardé le temps d'un aller-retour sur la page de l'opérateur (l'adresse de retour
 // ne le contient pas : elle transite par l'opérateur). Lu par la page de confirmation au retour.
@@ -118,7 +119,7 @@ export function usePayment(orderNumber: string | null, { email, token, enabled =
     [orderNumber, email, token]
   );
 
-  // Redirection vers la page de paiement de l'opérateur (Orange Money)
+  // Redirection vers la page de paiement du prestataire (Orange Money, Stripe, PayPal)
   const goToOperator = useCallback(
     (url: string | null | undefined): boolean => {
       if (!isSafeUrl(url)) return false;
@@ -204,10 +205,12 @@ export function usePayment(orderNumber: string | null, { email, token, enabled =
       /** Paiement instantané proposé pour ce panier */
       available: !!summary?.instant,
       provider: summary?.instant?.provider ?? null,
-      /** Nom de l'opérateur (« MVola », « Orange Money », « Airtel Money ») */
+      /** Nom du prestataire (« MVola », « Orange Money », « Airtel Money », « Stripe », « PayPal ») */
       label: summary?.instant?.label ?? summary?.methodLabel ?? 'Mobile Money',
       /** push : le client confirme sur son téléphone ; redirect : il paie sur la page de l'opérateur */
       flow: summary?.instant?.flow ?? 'push',
+      /** Mobile Money, ou paiement en ligne uniquement (carte bancaire, PayPal : pas de paiement manuel) */
+      kind: summary?.instant?.kind ?? 'mobile_money',
       phonePrefixes: summary?.instant?.phonePrefixes ?? '',
       phonePlaceholder: summary?.instant?.phonePlaceholder ?? '03X XX XXX XX',
       /** Demande en cours : le client doit confirmer (téléphone) ou terminer le paiement (page de l'opérateur) */

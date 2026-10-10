@@ -1,20 +1,24 @@
 import type { PaymentMethod } from '@prisma/client';
 import { getAutomaticOperator } from './operators.js';
 
-// Moyens de paiement Mobile Money : le client envoie le montant au numéro marchand de la plateforme
-// puis saisit la référence de la transaction, qu'un administrateur vérifie.
-// Une carte bancaire nécessitera un prestataire de paiement (PSP) : ajouter une valeur à l'enum
-// PaymentMethod puis un adaptateur ici (création de session + webhook de confirmation).
+// Moyens de paiement proposés à la commande :
+//  - Mobile Money : le client envoie le montant au numéro marchand de la plateforme puis saisit la référence de la
+//    transaction, qu'un administrateur vérifie ; ou paie instantanément quand l'API de l'opérateur est configurée ;
+//  - carte bancaire (Stripe) et PayPal : paiement en ligne uniquement, sur la page du prestataire. Proposés dès que
+//    leurs identifiants sont configurés (voir lib/stripe.ts et lib/paypal.ts).
 
 interface MethodConfig {
   label: string;
-  envKey: string;
+  /** Numéro marchand (Mobile Money) ; null pour un paiement en ligne uniquement */
+  envKey: string | null;
 }
 
 const METHODS: Record<PaymentMethod, MethodConfig> = {
   mvola: { label: 'MVola', envKey: 'PAYMENT_MVOLA_NUMBER' },
   orange_money: { label: 'Orange Money', envKey: 'PAYMENT_ORANGE_MONEY_NUMBER' },
   airtel_money: { label: 'Airtel Money', envKey: 'PAYMENT_AIRTEL_MONEY_NUMBER' },
+  stripe: { label: 'Carte bancaire', envKey: null },
+  paypal: { label: 'PayPal', envKey: null },
 };
 
 export const PAYMENT_METHOD_IDS = Object.keys(METHODS) as [PaymentMethod, ...PaymentMethod[]];
@@ -22,23 +26,27 @@ export const PAYMENT_METHOD_IDS = Object.keys(METHODS) as [PaymentMethod, ...Pay
 export interface PaymentMethodInfo {
   id: PaymentMethod;
   label: string;
+  /** Numéro marchand (vide pour la carte bancaire et PayPal) */
   number: string;
   accountName: string;
-  /** Paiement instantané par l'API de l'opérateur disponible (sinon : envoi manuel + référence) */
+  /** Paiement instantané par l'API du prestataire disponible (sinon : envoi manuel + référence) */
   automatic: boolean;
+  /** Paiement manuel par référence possible (Mobile Money) ; faux pour la carte bancaire et PayPal */
+  manual: boolean;
 }
 
 function paymentAccountName(): string {
   return process.env.PAYMENT_ACCOUNT_NAME?.trim() || process.env.PLATFORM_NAME?.trim() || 'Tsena';
 }
 
-// Seuls les moyens dont le numéro marchand est configuré sont proposés
+// Mobile Money : proposé si son numéro marchand est configuré. Carte / PayPal : si leurs identifiants le sont.
 export function getPaymentMethods(): PaymentMethodInfo[] {
-  return PAYMENT_METHOD_IDS.flatMap((id) => {
-    const number = process.env[METHODS[id].envKey]?.trim();
-    return number
-      ? [{ id, label: METHODS[id].label, number, accountName: paymentAccountName(), automatic: getAutomaticOperator(id) !== null }]
-      : [];
+  return PAYMENT_METHOD_IDS.flatMap((id): PaymentMethodInfo[] => {
+    const { label, envKey } = METHODS[id];
+    const automatic = getAutomaticOperator(id) !== null;
+    if (!envKey) return automatic ? [{ id, label, number: '', accountName: paymentAccountName(), automatic, manual: false }] : [];
+    const number = process.env[envKey]?.trim();
+    return number ? [{ id, label, number, accountName: paymentAccountName(), automatic, manual: true }] : [];
   });
 }
 
@@ -49,3 +57,6 @@ export function getPaymentMethod(id: string | null | undefined): PaymentMethodIn
 export function paymentMethodLabel(id: string | null | undefined): string | null {
   return id && id in METHODS ? METHODS[id as PaymentMethod].label : null;
 }
+
+// Vrai si le moyen de paiement accepte un paiement manuel par référence (Mobile Money uniquement)
+export const acceptsManualPayment = (id: string | null | undefined): boolean => !!id && id in METHODS && METHODS[id as PaymentMethod].envKey !== null;

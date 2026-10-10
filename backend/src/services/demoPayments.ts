@@ -2,12 +2,14 @@ import type { Express, Request } from 'express';
 import { createMockMvola } from '../testing/mockMvolaServer.js';
 import { createMockOrange } from '../testing/mockOrangeServer.js';
 import { createMockAirtel } from '../testing/mockAirtelServer.js';
+import { createMockStripe } from '../testing/mockStripeServer.js';
+import { createMockPaypal } from '../testing/mockPaypalServer.js';
 
-// Paiement de DÉMONSTRATION : quand DEMO_PAYMENTS=true, les faux serveurs MVola, Orange Money et Airtel Money sont
-// montés dans le backend lui-même (sous /api/demo-pay) et le paiement instantané est activé contre eux. Les visiteurs
-// de la démo essaient ainsi tout le parcours, sans aucun argent réel ni identifiant d'opérateur.
+// Paiement de DÉMONSTRATION : quand DEMO_PAYMENTS=true, les faux serveurs MVola, Orange Money, Airtel Money, Stripe et
+// PayPal sont montés dans le backend lui-même (sous /api/demo-pay) et le paiement instantané est activé contre eux.
+// Les visiteurs de la démo essaient ainsi tout le parcours, sans aucun argent réel ni identifiant de prestataire.
 //  - MVola / Airtel : tout numéro valide « confirme » au bout de quelques secondes (…04 = refus, …05 = jamais confirmé) ;
-//  - Orange Money : le client est redirigé vers une page de paiement simulée (Payer / Annuler).
+//  - Orange Money, carte bancaire (Stripe), PayPal : le client est redirigé vers une page de paiement simulée.
 // Jamais sur un vrai site : le mode refuse de s'activer si des identifiants d'opérateur sont renseignés, et
 // l'interface affiche partout un bandeau « Paiement de démonstration ».
 
@@ -16,7 +18,7 @@ export const DEMO_PATH = '/api/demo-pay';
 let active = false;
 export const isDemoPayments = (): boolean => active;
 
-const REAL_CREDENTIALS = ['MVOLA_CONSUMER_KEY', 'ORANGE_MONEY_CLIENT_ID', 'AIRTEL_MONEY_CLIENT_ID'];
+const REAL_CREDENTIALS = ['MVOLA_CONSUMER_KEY', 'ORANGE_MONEY_CLIENT_ID', 'AIRTEL_MONEY_CLIENT_ID', 'STRIPE_SECRET_KEY', 'PAYPAL_CLIENT_ID'];
 const DEMO_NUMBERS: Record<string, string> = {
   PAYMENT_MVOLA_NUMBER: '034 00 000 00',
   PAYMENT_ORANGE_MONEY_NUMBER: '032 00 000 00',
@@ -51,6 +53,21 @@ export function setupDemoPayments(app: Express, port: number, env: NodeJS.Proces
     }).app
   );
 
+  app.use(
+    `${DEMO_PATH}/stripe`,
+    createMockStripe({ secretKey: 'sk_test_demo', recordRequests: false, mountPath: `${DEMO_PATH}/stripe`, pageOriginFromReturnUrl: true }).app
+  );
+  app.use(
+    `${DEMO_PATH}/paypal`,
+    createMockPaypal({
+      clientId: 'demo-client',
+      clientSecret: 'demo-secret',
+      recordRequests: false,
+      mountPath: `${DEMO_PATH}/paypal`,
+      pageOriginFromReturnUrl: true,
+    }).app
+  );
+
   Object.assign(env, {
     MVOLA_CONSUMER_KEY: 'demo-key',
     MVOLA_CONSUMER_SECRET: 'demo-secret',
@@ -64,13 +81,20 @@ export function setupDemoPayments(app: Express, port: number, env: NodeJS.Proces
     AIRTEL_MONEY_CLIENT_ID: 'demo-client',
     AIRTEL_MONEY_CLIENT_SECRET: 'demo-secret',
     AIRTEL_MONEY_API_BASE_URL: `${internal}/airtel`,
+    STRIPE_SECRET_KEY: 'sk_test_demo',
+    STRIPE_API_BASE_URL: `${internal}/stripe`,
+    PAYPAL_CLIENT_ID: 'demo-client',
+    PAYPAL_CLIENT_SECRET: 'demo-secret',
+    PAYPAL_API_BASE_URL: `${internal}/paypal`,
   });
+  // PayPal n'accepte pas l'Ariary : taux de démonstration si aucun n'est configuré
+  if (!env.PAYPAL_MGA_RATE?.trim()) env.PAYPAL_MGA_RATE = '5000';
   // Sans adresse publique, Orange Money resterait désactivé : le retour du client se règle à chaque demande (voir requestOrigin)
   if (!env.PUBLIC_SITE_URL?.trim() && !env.FRONTEND_URL?.trim()) env.PUBLIC_SITE_URL = 'http://localhost:3000';
   // Un moyen de paiement n'est proposé que si son numéro marchand est renseigné : numéros de démonstration par défaut
   for (const [key, value] of Object.entries(DEMO_NUMBERS)) if (!env[key]?.trim()) env[key] = value;
 
-  console.warn('⚠️  PAIEMENT DE DÉMONSTRATION ACTIVÉ : MVola, Orange Money et Airtel Money sont SIMULÉS, aucun argent réel. Ne jamais activer sur un vrai site.');
+  console.warn('⚠️  PAIEMENT DE DÉMONSTRATION ACTIVÉ : MVola, Orange Money, Airtel Money, Stripe et PayPal sont SIMULÉS, aucun argent réel. Ne jamais activer sur un vrai site.');
   active = true;
   return true;
 }

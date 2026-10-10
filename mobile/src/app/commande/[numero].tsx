@@ -16,6 +16,9 @@ import { useGuestOrders } from '../../features/payment/guestOrders';
 import { usePayment } from '../../features/payment/usePayment';
 import { colors } from '../../theme';
 
+// « d’Orange Money », « de Stripe », « de PayPal »
+const ofLabel = (label: string) => (/^[aeiouyéè]/i.test(label) ? `d’${label}` : `de ${label}`);
+
 export default function OrderPayment() {
   const { numero } = useLocalSearchParams<{ numero: string }>();
   const signedIn = useAuth((s) => s.status === 'signed-in');
@@ -96,14 +99,14 @@ export default function OrderPayment() {
 
       {canPay && instant ? (
         <Card style={{ gap: 10 }}>
-          <Title style={{ fontSize: 17 }}>Payer avec {instant.label}</Title>
+          <Title style={{ fontSize: 17 }}>{instant.provider === 'stripe' ? 'Payer par carte bancaire' : `Payer avec ${instant.label}`}</Title>
           {payment.waiting ? (
             <View style={{ alignItems: 'center', gap: 10 }}>
               <ActivityIndicator color={colors.primary} />
               <Body style={{ textAlign: 'center' }}>
                 {instant.flow === 'push'
                   ? `Confirmez la demande reçue sur le ${payment.attempt?.payerPhone ?? 'téléphone'} avec votre code secret.`
-                  : 'Terminez le paiement sur la page d’Orange Money.'}
+                  : `Terminez le paiement sur la page sécurisée ${ofLabel(instant.label)}.`}
               </Body>
               {instant.flow === 'redirect' ? <Button variant="outline" title="Rouvrir la page de paiement" onPress={() => payment.resume()} /> : null}
             </View>
@@ -119,7 +122,7 @@ export default function OrderPayment() {
                   error={phoneError ?? undefined}
                 />
               ) : (
-                <Body muted>Vous serez dirigé vers la page sécurisée d’Orange Money, puis ramené ici.</Body>
+                <Body muted>Vous serez dirigé vers la page sécurisée {ofLabel(instant.label)}, puis ramené ici.</Body>
               )}
               {payment.lastFailure ? <ErrorText>{payment.lastFailure}</ErrorText> : null}
               <ErrorText>{errorMessage(payment.start.error)}</ErrorText>

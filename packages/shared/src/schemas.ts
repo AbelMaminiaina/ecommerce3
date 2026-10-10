@@ -37,7 +37,8 @@ export type ShippingAddressInput = z.infer<typeof shippingAddressSchema>;
 export const REFERENCE_PATTERN = /^[A-Za-z0-9._\-/ ]{4,60}$/;
 
 // Numéros malgaches par opérateur : MVola (034, 038), Orange Money (032, 037), Airtel Money (033)
-const PHONE_PATTERNS: Record<PaymentMethodId, RegExp> = {
+// (la carte bancaire et PayPal ne demandent pas de numéro)
+const PHONE_PATTERNS: Partial<Record<PaymentMethodId, RegExp>> = {
   mvola: /^03[48]\d{7}$/,
   orange_money: /^03[27]\d{7}$/,
   airtel_money: /^033\d{7}$/,
@@ -53,5 +54,5 @@ export function normalizeMgPhone(input: string): string {
 }
 
 export function isPayerNumber(provider: PaymentMethodId, input: string): boolean {
-  return PHONE_PATTERNS[provider].test(normalizeMgPhone(input));
+  return PHONE_PATTERNS[provider]?.test(normalizeMgPhone(input)) ?? false;
 }

@@ -306,7 +306,7 @@ describe('POST /api/payments/auto/callback/:provider', () => {
   });
 
   it('ignore (200) un opérateur inconnu sans rien vérifier', async () => {
-    const res = await request(buildApp()).post('/api/payments/auto/callback/paypal').send({ x: 1 });
+    const res = await request(buildApp()).post('/api/payments/auto/callback/inconnu').send({ x: 1 });
     expect(res.status).toBe(200);
     expect(handleOperatorCallback).not.toHaveBeenCalled();
   });

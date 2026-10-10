@@ -89,7 +89,7 @@ export default function Checkout() {
         </Card>
 
         <Card style={{ gap: 8 }}>
-          <Title style={styles.section}>Paiement Mobile Money</Title>
+          <Title style={styles.section}>Paiement</Title>
           {methods.isLoading ? <Body muted>Chargement…</Body> : null}
           {methods.error ? <ErrorText>{errorMessage(methods.error)}</ErrorText> : null}
           {methods.data?.map((m) => (
@@ -98,7 +98,9 @@ export default function Checkout() {
               selected={selectedMethod === m.id}
               onPress={() => setMethod(m.id)}
               title={m.label}
-              detail={m.automatic ? 'Paiement instantané' : `Envoi au ${m.number} puis saisie de la référence`}
+              detail={
+                !m.manual ? 'Paiement sécurisé en ligne' : m.automatic ? 'Paiement instantané' : `Envoi au ${m.number} puis saisie de la référence`
+              }
             />
           ))}
           <ErrorText>{errors.method}</ErrorText>

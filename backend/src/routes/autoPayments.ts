@@ -11,12 +11,13 @@ import { PaymentHttpError, handleOperatorCallback, initiateAutoPayment, reconcil
 
 const router = Router();
 
-// Paiement automatique par l'API d'un opérateur (MVola, Orange Money, Airtel Money ; voir services/mobileMoneyPayments.ts).
-// L'opérateur est celui choisi à la commande.
+// Paiement automatique par l'API d'un prestataire (MVola, Orange Money, Airtel Money, Stripe, PayPal ; voir
+// services/mobileMoneyPayments.ts). Le prestataire est celui choisi à la commande.
 //   POST /initiate            MVola / Airtel : le client donne son numéro et confirme sur son téléphone ;
-//                             Orange Money : renvoie l'adresse de la page de paiement d'Orange
+//                             Orange Money, Stripe, PayPal : renvoie l'adresse de la page de paiement du prestataire
 //   GET  /attempt/:id         le navigateur suit la demande (le serveur interroge l'opérateur à chaque appel)
-//   POST /callback/:provider  message de rappel de l'opérateur (non signé : sert seulement de déclencheur)
+//   POST /callback/:provider  message de rappel ou webhook du prestataire (jamais cru sur parole : sert seulement de
+//                             déclencheur ; seul le statut relu auprès du prestataire compte)
 
 // Chaque demande peut faire sonner un téléphone : limite stricte par adresse IP (et par commande / numéro dans le service)
 const initiateLimiter = rateLimit({
@@ -34,7 +35,7 @@ const callbackLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 const initiateSchema = z.object({
   orderNumber: z.string().trim().min(1),
   email: z.string().trim().email().optional(),
-  // Obligatoire pour MVola et Airtel Money ; inutile pour Orange Money (le client saisit son numéro chez Orange)
+  // Obligatoire pour MVola et Airtel Money ; inutile pour les paiements sur la page du prestataire (Orange, Stripe, PayPal)
   payerPhone: z.string().trim().max(30).optional(),
 });
 

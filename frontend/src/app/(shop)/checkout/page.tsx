@@ -9,7 +9,7 @@ import { useCompanyAccess } from '@/hooks/useCompanyAccess';
 import { formatDeliveryWindow, formatPrice, formatQuantity, getShippingCost, groupBySeller, isUpcoming, resolveUnitPrice } from '@/lib/utils';
 import { PageHeader } from '@/components/shop/PageHeader';
 import { createOrder } from '@/lib/api/checkout';
-import { getPaymentMethods, type PaymentMethodId, type PaymentMethodInfo } from '@/lib/api/payments';
+import { getPaymentMethods, paymentMethodIcon, type PaymentMethodId, type PaymentMethodInfo } from '@/lib/api/payments';
 import { filterCheckoutSteps, type CheckoutStepId } from './checkout-steps';
 
 type DeliveryMethod = 'standard' | 'express' | 'retrait';
@@ -455,10 +455,10 @@ export default function CheckoutPage() {
                   {/* Paiement */}
                   <div className="form-section">
                     <div className="section-label">
-                      <span className="label-icon"><i className="bi bi-phone"></i></span>
+                      <span className="label-icon"><i className={`bi ${paymentMethodIcon(paymentMethod)}`}></i></span>
                       <div>
-                        <h3>Paiement par Mobile Money</h3>
-                        <p>Le paiement en ligne est demandé à la commande.</p>
+                        <h3>Paiement</h3>
+                        <p>Mobile Money, carte bancaire ou PayPal : le paiement est demandé à la commande.</p>
                       </div>
                     </div>
                     <div className="section-fields">
@@ -490,16 +490,25 @@ export default function CheckoutPage() {
                                 checked={paymentMethod === method.id}
                                 onChange={() => setPaymentMethod(method.id)}
                               />
-                              <span className="tab-inner"><i className="bi bi-phone"></i><span>{method.label}</span></span>
+                              <span className="tab-inner"><i className={`bi ${paymentMethodIcon(method.id)}`}></i><span>{method.label}</span></span>
                             </label>
                           ))}
                         </div>
                       )}
                       <div className="alt-method-msg">
                         <i className="bi bi-info-circle me-2"></i>
-                        Après validation, le numéro à créditer vous est indiqué ({formatPrice(total)} au total) et votre
-                        commande est traitée dès que votre paiement est vérifié. Le paiement par carte bancaire n&apos;est
-                        pas encore disponible.
+                        {paymentMethods?.find((m) => m.id === paymentMethod)?.manual === false ? (
+                          <>
+                            Après validation, vous êtes redirigé vers la page de paiement sécurisée{' '}
+                            {paymentMethod === 'paypal' ? 'de PayPal' : 'de notre prestataire (Stripe)'} pour régler{' '}
+                            {formatPrice(total)}. Votre commande est traitée dès la confirmation du paiement.
+                          </>
+                        ) : (
+                          <>
+                            Après validation, le numéro à créditer vous est indiqué ({formatPrice(total)} au total) et votre
+                            commande est traitée dès que votre paiement est vérifié.
+                          </>
+                        )}
                       </div>
 
                       {belowMoqItems.length > 0 && (
@@ -628,7 +637,9 @@ export default function CheckoutPage() {
                     <i className="bi bi-shield-lock"></i>
                     <span>Paiement sécurisé</span>
                   </div>
-                  <span className="secure-methods">MVola · Orange Money · Airtel Money</span>
+                  <span className="secure-methods">
+                    {paymentMethods?.length ? paymentMethods.map((m) => m.label).join(' · ') : 'MVola · Orange Money · Airtel Money'}
+                  </span>
                 </div>
               </div>
             </div>

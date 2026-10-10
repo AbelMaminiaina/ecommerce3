@@ -82,8 +82,8 @@ describe('GET /api/payments/methods', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.methods).toEqual([
-      { id: 'mvola', label: 'MVola', number: '034 00 000 00', accountName: 'Tsena', automatic: false },
-      { id: 'orange_money', label: 'Orange Money', number: '032 00 000 00', accountName: 'Tsena', automatic: false },
+      { id: 'mvola', label: 'MVola', number: '034 00 000 00', accountName: 'Tsena', automatic: false, manual: true },
+      { id: 'orange_money', label: 'Orange Money', number: '032 00 000 00', accountName: 'Tsena', automatic: false, manual: true },
     ]);
   });
 });
