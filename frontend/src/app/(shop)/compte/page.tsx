@@ -75,7 +75,6 @@ function OrderItem({ order, token }: { order: CompanyOrder; token?: string }) {
         {order.items.map((item, i) => (
           <div key={i} className="order-line">
             <span className="line-img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               {item.image && <img src={item.image} alt={item.name} />}
             </span>
             <div className="line-name">
@@ -129,7 +128,6 @@ function WishCard({ product }: { product: Product }) {
     <div className="col-sm-6 col-xl-4">
       <div className="wish-card">
         <Link href={`/produits/${product.slug}`} className="wish-img">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={getProductImage(product)} alt={product.name} />
         </Link>
         <div className="wish-card-body">

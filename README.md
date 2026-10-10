@@ -5,7 +5,7 @@ Plateforme de vente en gros (B2B) multi-vendeurs pour les professionnels à Mada
 ## Technologies
 
 ### Frontend
-- **Next.js 14** - Framework React avec App Router
+- **Next.js 16** - Framework React avec App Router (React 19)
 - **TypeScript** - Typage statique
 - **Tailwind CSS** - Styling utilitaire
 - **Framer Motion** - Animations
@@ -24,7 +24,7 @@ Plateforme de vente en gros (B2B) multi-vendeurs pour les professionnels à Mada
 ## Installation
 
 ### Prérequis
-- Node.js 18+
+- Node.js 20.9+
 - Docker & Docker Compose
 - Git
 
@@ -128,7 +128,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
 ### Points positifs
 - Architecture claire avec séparation frontend/backend
-- Technologies modernes (TypeScript strict, Next.js 14, Prisma)
+- Technologies modernes (TypeScript strict, Next.js 16, Prisma)
 - Infrastructure Docker fonctionnelle (PostgreSQL + Redis)
 - Pipeline CI/CD GitHub Actions (lint + build)
 

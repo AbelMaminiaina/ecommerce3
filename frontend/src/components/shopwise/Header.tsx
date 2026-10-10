@@ -227,7 +227,6 @@ export function ShopwiseHeader() {
                         {cart.items.map((item) => (
                           <div key={item.productId} className="sw-flyout-item">
                             <div className="sw-flyout-thumb">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={item.image} alt={item.name} />
                             </div>
                             <div className="sw-flyout-details">

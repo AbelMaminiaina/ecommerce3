@@ -16,7 +16,7 @@ export function useProductActions(product: Product) {
   const { addToast } = useToast();
   const { isApproved, canOrder } = useCompanyAccess();
   const [justAdded, setJustAdded] = useState(false);
-  const resetTimer = useRef<ReturnType<typeof setTimeout>>();
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 

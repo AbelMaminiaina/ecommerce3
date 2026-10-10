@@ -5,7 +5,7 @@ Site web moderne et chaleureux pour une ferme avicole biologique spécialisée d
 ## Stack Technique
 
 ### Frontend
-- **Framework**: Next.js 14+ (App Router) avec React 18+ et TypeScript
+- **Framework**: Next.js 16 (App Router) avec React 19 et TypeScript
 - **Styling**: Tailwind CSS pour le design responsive
 - **Animations**: Framer Motion pour des transitions fluides
 - **Icônes**: Lucide React

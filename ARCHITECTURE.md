@@ -8,7 +8,7 @@ Si une règle doit évoluer, modifiez ce fichier en même temps que le code.
 ```
 ecommerce3/
 ├── backend/     API REST Express + Prisma (PostgreSQL) + Redis   → http://localhost:3011/api
-├── frontend/    Next.js 14 (App Router) + NextAuth               → http://localhost:3000
+├── frontend/    Next.js 16 (App Router) + NextAuth               → http://localhost:3000
 ├── docker/, nginx/, docker-compose*.yml, scripts/                 → infrastructure et déploiement (voir DEPLOY-DEMO.md)
 └── package.json (racine) : `npm run dev` lance backend et frontend ensemble
 ```

@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20' # Next.js 16 exige Node 20.9 ou plus (comme les images Docker node:20)
 
 jobs:
   # ============================================

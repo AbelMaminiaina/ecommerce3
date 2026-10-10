@@ -146,7 +146,6 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                       ))}
                     </div>
                   )}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={currentImage} alt={`${product.name} - photo ${imageIndex + 1}`} />
                   {gallery.length > 1 && (
                     <>
@@ -170,7 +169,6 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                         aria-current={index === imageIndex}
                         onClick={() => showImage(index)}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={src} alt="" />
                       </button>
                     ))}
