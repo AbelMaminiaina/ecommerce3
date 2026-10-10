@@ -42,7 +42,7 @@ const checkoutSchema = z.object({
     })
     .optional(),
   deliveryMethod: z.enum(['standard', 'express', 'retrait']),
-  // Paiement en ligne obligatoire (Mobile Money) : pas de paiement différé ni à la livraison
+  // Paiement en ligne obligatoire (Mobile Money, carte bancaire, PayPal) : pas de paiement différé ni à la livraison
   paymentMethod: z.enum(PAYMENT_METHOD_IDS),
   notes: z.string().optional(),
   // Commande sans compte : coordonnées du visiteur (obligatoires s'il n'est pas connecté)
@@ -797,12 +797,13 @@ router.get('/:orderNumber', authenticate, async (req: Request, res: Response) =>
     const order = await prisma.order.findUnique({
       where: { orderNumber },
       include: {
-        company: true,
+        // Coordonnées utiles à la commande uniquement : jamais les données de reversement ni la commission
+        company: { select: { id: true, name: true, legalName: true, contactEmail: true, contactPhone: true } },
         customer: true,
         address: true,
         items: {
           include: {
-            product: true,
+            product: { select: { id: true, name: true, slug: true, images: true, unit: true } },
           },
         },
       },

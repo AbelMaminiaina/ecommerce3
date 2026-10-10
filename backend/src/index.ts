@@ -24,6 +24,9 @@ import { authenticate, requirePlatformAdmin } from './middleware/auth.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Ne pas annoncer la technologie du serveur (en-tête X-Powered-By: Express)
+app.disable('x-powered-by');
+
 // Derrière nginx : req.ip doit être l'adresse du client (limitation de débit des commandes invitées)
 app.set('trust proxy', 1);
 
@@ -80,15 +83,11 @@ app.get('/api/health', async (_req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     redis: redisStatus,
-    env: {
-      hasUpstashUrl: Boolean(process.env.UPSTASH_REDIS_REST_URL),
-      hasUpstashToken: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
-    },
   });
 });
 
-// Cache stats endpoint
-app.get('/api/cache/stats', async (_req, res) => {
+// Statistiques du cache (détails internes de Redis) : administrateurs uniquement
+app.get('/api/cache/stats', authenticate, requirePlatformAdmin, async (_req, res) => {
   try {
     const info = await redis.info('stats');
     const dbSize = await redis.dbsize();

@@ -2,6 +2,14 @@ import Script from 'next/script';
 import { CONTACT } from '@/lib/contact';
 import { SITE_URL } from '@/lib/site';
 
+// Données structurées insérées dans une balise <script> : le nom ou la description d'un produit (saisis par un
+// vendeur) ne doivent jamais pouvoir fermer la balise (« </script> ») et injecter du code dans la page.
+// JSON.stringify n'échappe pas « < » : on le remplace, avec « > », « & » et les séparateurs de ligne, par sa
+// séquence \uXXXX, qui reste du JSON valide.
+export function jsonLdHtml(data: unknown): string {
+  return JSON.stringify(data).replace(/[<>&\u2028\u2029]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
+}
+
 // Organisation / Entreprise
 export function OrganizationJsonLd() {
   const jsonLd = {
@@ -36,7 +44,7 @@ export function OrganizationJsonLd() {
     <Script
       id="organization-jsonld"
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
     />
   );
 }
@@ -83,7 +91,7 @@ export function LocalBusinessJsonLd() {
     <Script
       id="localbusiness-jsonld"
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
     />
   );
 }
@@ -140,7 +148,7 @@ export function ProductJsonLd({
     <Script
       id={`product-jsonld-${slug}`}
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
     />
   );
 }
@@ -167,7 +175,7 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
     <Script
       id="breadcrumb-jsonld"
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
     />
   );
 }
@@ -196,7 +204,7 @@ export function WebsiteJsonLd() {
     <Script
       id="website-jsonld"
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
     />
   );
 }

@@ -1,19 +1,28 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma.js';
+import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
+import { rateLimit } from '../lib/rateLimit.js';
 
 const router = Router();
 
+// Formulaire public : limite par adresse IP contre le spam
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: 'Trop de messages envoyés. Réessayez plus tard.',
+});
+
 const contactSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  subject: z.string().min(1),
-  message: z.string().min(10),
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().max(200),
+  phone: z.string().trim().max(30).optional(),
+  subject: z.string().trim().min(1).max(200),
+  message: z.string().trim().min(10).max(5000),
   consent: z.boolean().refine((val) => val === true),
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', contactLimiter, async (req: Request, res: Response) => {
   try {
     const validatedData = contactSchema.parse(req.body);
 
@@ -54,8 +63,8 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// Get all messages (admin)
-router.get('/', async (_req: Request, res: Response) => {
+// Messages reçus : réservés aux administrateurs (ils contiennent des données personnelles)
+router.get('/', authenticate, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const messages = await prisma.contactMessage.findMany({
       orderBy: { createdAt: 'desc' },
@@ -68,7 +77,7 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // Mark message as read
-router.patch('/:id/read', async (req: Request, res: Response) => {
+router.patch('/:id/read', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

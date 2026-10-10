@@ -2,9 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { UserRole } from '@prisma/client';
 
-// En production, un secret absent rendrait tous les jetons falsifiables : on refuse de démarrer
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET est obligatoire en production');
+// En production, un secret absent ou court rendrait les jetons falsifiables : on refuse de démarrer
+if (process.env.NODE_ENV === 'production' && (process.env.JWT_SECRET?.length ?? 0) < 32) {
+  throw new Error('JWT_SECRET est obligatoire en production (32 caractères minimum, ex. : openssl rand -hex 32)');
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 // Site web (NextAuth) : il ne sait pas renouveler le jeton, qui dure donc 7 jours
@@ -28,9 +28,10 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 export function signToken(payload: JwtPayload, expiresIn: string = JWT_EXPIRES_IN): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions);
+  return jwt.sign(payload, JWT_SECRET, { expiresIn, algorithm: 'HS256' } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  // Algorithme imposé : un jeton signé autrement (ou « none ») est refusé
+  return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
 }

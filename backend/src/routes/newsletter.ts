@@ -1,14 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma.js';
+import { authenticate, requirePlatformAdmin } from '../middleware/auth.js';
+import { rateLimit } from '../lib/rateLimit.js';
 
 const router = Router();
 
-const newsletterSchema = z.object({
-  email: z.string().email('Email invalide'),
+// Inscription publique : limite par adresse IP (évite d'inscrire en masse des adresses de tiers)
+const subscribeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: 'Trop de demandes. Réessayez plus tard.',
 });
 
-router.post('/', async (req: Request, res: Response) => {
+const newsletterSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Email invalide').max(200),
+});
+
+router.post('/', subscribeLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = newsletterSchema.parse(req.body);
 
@@ -63,7 +72,8 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/', async (_req: Request, res: Response) => {
+// Nombre d'abonnés : réservé aux administrateurs
+router.get('/', authenticate, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const count = await prisma.newsletterSubscriber.count({
       where: { isActive: true },
@@ -75,8 +85,9 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-// Unsubscribe endpoint
-router.delete('/:email', async (req: Request, res: Response) => {
+// Désinscription d'une adresse : réservée aux administrateurs (sinon n'importe qui pourrait désinscrire n'importe qui).
+// Un lien de désinscription dans les e-mails devra porter un jeton signé propre à l'abonné.
+router.delete('/:email', authenticate, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { email } = req.params;
 
