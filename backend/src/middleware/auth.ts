@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyToken, type JwtPayload } from '../lib/auth.js';
 import prisma from '../lib/prisma.js';
+import { resolveSessionUser } from '../lib/sessionUser.js';
 
 declare global {
   namespace Express {
@@ -11,18 +12,31 @@ declare global {
 }
 
 // Vérifie le JWT et attache req.user. À utiliser en premier sur toute route protégée.
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+// Rôle et entreprise sont relus en base (resolveSessionUser) : un compte supprimé perd l'accès tout de suite.
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentification requise' });
   }
 
+  let payload: JwtPayload;
   try {
-    req.user = verifyToken(header.slice(7));
-    next();
+    payload = verifyToken(header.slice(7));
   } catch {
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
+
+  try {
+    const user = await resolveSessionUser(payload);
+    if (!user) {
+      return res.status(401).json({ error: 'Session expirée, reconnectez-vous' });
+    }
+    req.user = user;
+  } catch (error) {
+    console.error('Error checking session user:', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+  next();
 }
 
 // À chaîner après authenticate. Réserve la route au staff plateforme.

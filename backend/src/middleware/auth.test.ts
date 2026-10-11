@@ -4,6 +4,8 @@ import { mockReset, type DeepMockProxy } from 'vitest-mock-extended';
 import type { PrismaClient } from '@prisma/client';
 
 vi.mock('../lib/prisma.js');
+// Vraie relecture du compte en base (simulée par défaut dans src/test/setup.ts)
+vi.unmock('../lib/sessionUser.js');
 
 import prisma from '../lib/prisma.js';
 import { signToken } from '../lib/auth.js';
@@ -23,38 +25,83 @@ function mockRes() {
 }
 
 describe('authenticate', () => {
-  it('rejects a request with no Authorization header', () => {
+  it('rejects a request with no Authorization header', async () => {
     const req = { headers: {} } as Request;
     const res = mockRes();
     const next = vi.fn();
 
-    authenticate(req, res, next);
+    await authenticate(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid token', () => {
+  it('rejects an invalid token', async () => {
     const req = { headers: { authorization: 'Bearer not-a-token' } } as Request;
     const res = mockRes();
     const next = vi.fn();
 
-    authenticate(req, res, next);
+    await authenticate(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('attaches the decoded payload to req.user and calls next on a valid token', () => {
+  it('attaches the user to req.user and calls next on a valid token', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'buyer', companyId: 'c1', deletedAt: null } as any);
     const token = signToken({ userId: 'u1', role: 'buyer', companyId: 'c1' });
     const req = { headers: { authorization: `Bearer ${token}` } } as Request;
     const res = mockRes();
     const next = vi.fn();
 
-    authenticate(req, res, next);
+    await authenticate(req, res, next);
 
     expect(next).toHaveBeenCalled();
-    expect(req.user).toMatchObject({ userId: 'u1', role: 'buyer', companyId: 'c1' });
+    expect(req.user).toEqual({ userId: 'u1', role: 'buyer', companyId: 'c1' });
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u1' } }));
+  });
+
+  it('refuse le jeton encore valide d’un compte supprimé', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'buyer', companyId: null, deletedAt: new Date() } as any);
+    const token = signToken({ userId: 'u1', role: 'buyer', companyId: null });
+    const req = { headers: { authorization: `Bearer ${token}` } } as Request;
+    const res = mockRes();
+    const next = vi.fn();
+
+    await authenticate(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('refuse le jeton d’un compte qui n’existe plus en base', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    const token = signToken({ userId: 'disparu', role: 'platform_admin', companyId: null });
+    const req = { headers: { authorization: `Bearer ${token}` } } as Request;
+    const res = mockRes();
+    const next = vi.fn();
+
+    await authenticate(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('applique le rôle et l’entreprise actuels, pas ceux du jeton (administrateur rétrogradé)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'buyer', companyId: 'c2', deletedAt: null } as any);
+    const token = signToken({ userId: 'u1', role: 'platform_admin', companyId: null });
+    const req = { headers: { authorization: `Bearer ${token}` } } as Request;
+    const res = mockRes();
+    const next = vi.fn();
+
+    await authenticate(req, res, next);
+
+    expect(req.user).toEqual({ userId: 'u1', role: 'buyer', companyId: 'c2' });
+    const adminRes = mockRes();
+    const adminNext = vi.fn();
+    requirePlatformAdmin(req, adminRes, adminNext);
+    expect(adminRes.status).toHaveBeenCalledWith(403);
+    expect(adminNext).not.toHaveBeenCalled();
   });
 });
 

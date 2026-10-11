@@ -5,6 +5,8 @@ import 'next-auth/jwt';
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
+    // Compte supprimé ou session refusée par le backend : le navigateur doit se déconnecter
+    error?: 'SessionRevoked';
     user?: {
       name?: string | null;
       email?: string | null;
@@ -32,5 +34,8 @@ declare module 'next-auth/jwt' {
     companyId?: string | null;
     companyName?: string | null;
     companyStatus?: CompanyStatus | null;
+    // Dernière vérification de la session auprès du backend (ms)
+    checkedAt?: number;
+    error?: 'SessionRevoked';
   }
 }
