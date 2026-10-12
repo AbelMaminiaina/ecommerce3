@@ -24,6 +24,14 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - E-mail d'annulation envoyé au client lorsqu'une commande est annulée depuis l'admin, avec le motif d'annulation saisi par l'administrateur
 - Envoi asynchrone (n'impacte pas le temps de réponse du checkout / de la mise à jour de statut)
 
+## Relances automatiques
+
+Tâches récurrentes (file BullMQ sur Redis, voir ARCHITECTURE.md, règle 9). Chaque relance n'est envoyée qu'une fois.
+
+- Rappel de paiement au client avant l'annulation automatique d'une commande non payée (un seul rappel par panier multi-vendeurs, nouveau rappel après un paiement refusé)
+- Alerte au vendeur pour toute commande payée non expédiée dans le délai (compté depuis la disponibilité pour une précommande), avec un récapitulatif à l'administrateur
+- Alerte de stock bas au vendeur (à l'administrateur pour les produits de la plateforme), réarmée quand le stock remonte
+
 ## Administration
 
 - Gestion des produits : création, modification, désactivation (visibilité), suppression (avec suppression douce si le produit est lié à des commandes existantes)

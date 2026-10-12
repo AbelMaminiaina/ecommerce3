@@ -230,6 +230,7 @@ model Product {
   estimatedWeightKg Float? // Poids estimé indicatif — n'entre JAMAIS dans le calcul du prix
   freeShipping      Boolean   @default(false) // Si true, la commande contenant ce produit est livrée gratuitement
   availableFrom     DateTime? // Date de disponibilité — avant cette date le client peut réserver (précommande)
+  lowStockAlertAt   DateTime? // Alerte « stock bas » envoyée ; remis à null quand le stock remonte
 
   // Metadata libre (accessoires, etc.)
   dimensions String?
@@ -371,6 +372,11 @@ model Order {
   paymentRejectionReason String?
   // Stock déjà décrémenté pour cette commande (à restituer en cas d'annulation)
   stockReserved          Boolean        @default(false)
+
+  // Relances automatiques (services/paymentReminders.ts, services/sellerAlerts.ts) : date d'envoi, une seule fois.
+  // paymentReminderSentAt est remis à null quand un paiement est refusé (nouveau délai = nouveau rappel).
+  paymentReminderSentAt DateTime?
+  shippingAlertSentAt   DateTime?
 
   subtotal     Int // Prix en Ariary
   shippingCost Int // Prix en Ariary

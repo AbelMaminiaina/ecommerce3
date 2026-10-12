@@ -569,7 +569,7 @@ describe('admin payments', () => {
 
     expect(res.status).toBe(200);
     const args = prismaMock.order.updateMany.mock.calls[0][0] as any;
-    expect(args.data).toEqual({ paymentStatus: 'rejected', paymentRejectionReason: 'Transaction introuvable' });
+    expect(args.data).toEqual({ paymentStatus: 'rejected', paymentRejectionReason: 'Transaction introuvable', paymentReminderSentAt: null });
     expect(sendPaymentRejectedEmail).toHaveBeenCalledWith(
       expect.objectContaining({ reason: 'Transaction introuvable', contactEmail: 'jean@example.mg' })
     );

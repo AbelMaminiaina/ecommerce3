@@ -107,15 +107,19 @@ function formatPrice(price: number): string {
   }).format(price) + ' Ar';
 }
 
+// Heure de Madagascar, quel que soit le fuseau du serveur (les conteneurs Docker tournent en UTC)
+const TIME_ZONE = 'Indian/Antananarivo';
+
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('fr-FR', {
     dateStyle: 'long',
     timeStyle: 'short',
+    timeZone: TIME_ZONE,
   }).format(date);
 }
 
 function formatDateOnly(date: Date | string): string {
-  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(date));
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: TIME_ZONE }).format(new Date(date));
 }
 
 // Date de disponibilité (réservation / précommande) figée sur la ligne de commande.
@@ -1038,6 +1042,154 @@ export async function sendPayoutPaidEmail(data: PayoutPaidEmailData): Promise<bo
     return true;
   } catch (error) {
     console.error('Error sending payout email:', error);
+    return false;
+  }
+}
+
+const linkButton = (url: string, label: string) =>
+  `<p style="margin: 25px 0 0;"><a href="${url}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">${label}</a></p>`;
+
+interface PaymentReminderEmailData extends PaymentEmailData {
+  expiresAt: Date;
+  trackingUrl: string;
+}
+
+// Rappel au client : commande toujours non payée, annulée automatiquement à `expiresAt`
+export async function sendPaymentReminderEmail(data: PaymentReminderEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping payment reminder email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep({ ...data, expiresAt: formatDate(data.expiresAt) });
+    const plural = safe.orderNumbers.length > 1;
+    const html = paymentEmailShell(
+      'Votre commande attend votre paiement',
+      'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+      '⏰',
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.companyName}, nous n'avons pas encore reçu le paiement de ${plural ? 'vos commandes' : 'votre commande'} <strong>${safe.orderNumbers.join(', ')}</strong> (${formatPrice(data.totalAmount)}).</p>
+      <p style="margin: 15px 0; color: #b45309;"><strong>Sans paiement avant le ${safe.expiresAt}, ${plural ? 'elles seront annulées' : 'elle sera annulée'} automatiquement</strong> et les produits remis en vente.</p>
+      ${linkButton(safe.trackingUrl, 'Payer ou suivre ma commande')}`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail,
+      subject: `⏰ Paiement en attente - ${data.orderNumbers.join(', ')}`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending payment reminder email:', error);
+    return false;
+  }
+}
+
+interface LateShipmentEmailData {
+  recipientName: string;
+  /** Destinataire ; absent = l'administrateur de la plateforme */
+  contactEmail?: string;
+  orders: { orderNumber: string; total: number; dueAt: Date; sellerName?: string }[];
+  manageUrl: string;
+}
+
+// Alerte au vendeur (ou à l'administrateur) : commandes payées qui auraient dû être expédiées
+export async function sendLateShipmentEmail(data: LateShipmentEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping late shipment email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep({
+      recipientName: data.recipientName,
+      manageUrl: data.manageUrl,
+      orders: data.orders.map((o) => ({ ...o, dueAt: formatDate(o.dueAt) })),
+    });
+    const withSeller = safe.orders.some((o) => o.sellerName);
+    const rows = safe.orders
+      .map(
+        (o, i) => `<tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${o.orderNumber}</strong></td>
+          ${withSeller ? `<td style="padding: 8px; border-bottom: 1px solid #eee;">${o.sellerName ?? BRAND_NAME}</td>` : ''}
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${formatPrice(data.orders[i].total)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; color: #dc2626;">${o.dueAt}</td>
+        </tr>`
+      )
+      .join('');
+    const count = safe.orders.length;
+    const html = paymentEmailShell(
+      `${count} commande${count > 1 ? 's' : ''} en retard d'expédition`,
+      'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+      '📦',
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.recipientName}, ${count > 1 ? 'ces commandes payées attendent' : 'cette commande payée attend'} toujours d'être expédiée${count > 1 ? 's' : ''} :</p>
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+        <tr style="background: #f9fafb;"><th style="padding: 8px;">Commande</th>${withSeller ? '<th style="padding: 8px;">Vendeur</th>' : ''}<th style="padding: 8px;">Montant</th><th style="padding: 8px;">À expédier avant</th></tr>
+        ${rows}
+      </table>
+      <p style="margin: 15px 0; color: #333;">Pensez à passer chaque commande en « expédiée » dès son départ : le client est prévenu automatiquement.</p>
+      ${linkButton(safe.manageUrl, 'Voir les commandes')}`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail ?? adminEmail(),
+      subject: `📦 ${count} commande${count > 1 ? 's' : ''} en retard d'expédition`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending late shipment email:', error);
+    return false;
+  }
+}
+
+interface LowStockEmailData {
+  recipientName: string;
+  /** Destinataire ; absent = l'administrateur de la plateforme */
+  contactEmail?: string;
+  products: { name: string; stockQuantity: number; unit: string; moq: number }[];
+  manageUrl: string;
+}
+
+// Alerte au vendeur (ou à l'administrateur pour les produits de la plateforme) : produits presque épuisés
+export async function sendLowStockEmail(data: LowStockEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping low stock email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
+    const rows = safe.products
+      .map(
+        (p) => `<tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${p.name}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; color: ${p.stockQuantity <= 0 ? '#dc2626' : '#d97706'};"><strong>${p.stockQuantity}</strong> ${p.unit}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${p.stockQuantity < p.moq ? `Sous le minimum de commande (${p.moq})` : p.stockQuantity <= 0 ? 'Épuisé' : 'Stock bas'}</td>
+        </tr>`
+      )
+      .join('');
+    const count = safe.products.length;
+    const html = paymentEmailShell(
+      `${count} produit${count > 1 ? 's' : ''} à réapprovisionner`,
+      'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+      '📉',
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.recipientName}, le stock de ${count > 1 ? 'ces produits' : 'ce produit'} est presque épuisé :</p>
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+        <tr style="background: #f9fafb;"><th style="padding: 8px;">Produit</th><th style="padding: 8px;">Stock</th><th style="padding: 8px;"></th></tr>
+        ${rows}
+      </table>
+      ${linkButton(safe.manageUrl, 'Mettre à jour le stock')}`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail ?? adminEmail(),
+      subject: `📉 Stock bas : ${count} produit${count > 1 ? 's' : ''}`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending low stock email:', error);
     return false;
   }
 }

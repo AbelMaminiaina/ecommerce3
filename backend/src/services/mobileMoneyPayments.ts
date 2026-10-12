@@ -11,6 +11,7 @@ import { normalizeMalagasyMobile } from '../lib/phone.js';
 import type { GroupOrder } from '../lib/paymentGroup.js';
 import { markOrdersPaid, type BuyerOrder } from './paymentSettlement.js';
 import type { RecurringJob } from './jobs.js';
+import { siteUrl } from '../lib/siteUrl.js';
 
 // Paiement automatique par l'API d'un prestataire (MVola, Orange Money, Airtel Money, Stripe, PayPal) : le site
 // vérifie le résultat AUPRÈS DU PRESTATAIRE (requête authentifiée) puis passe les commandes en « payées ».
@@ -44,8 +45,6 @@ const fallbackHint = (operator: OperatorAdapter) =>
   operator.kind === 'mobile_money' ? ' ou payez manuellement avec une référence' : '';
 const timeoutReason = (operator: OperatorAdapter) => `${TIMEOUT_REASON_PREFIX} (${Math.round(operator.pendingTtlMs / 60_000)} min)`;
 
-// Adresse publique du site (retour du client après une page de paiement externe)
-const siteUrl = () => (process.env.PUBLIC_SITE_URL?.trim() || process.env.FRONTEND_URL?.trim() || 'http://localhost:3000').replace(/\/+$/, '');
 
 function operatorOf(attempt: PaymentAttempt): OperatorAdapter | null {
   return getOperator(attempt.provider);

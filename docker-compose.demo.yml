@@ -97,6 +97,10 @@ services:
       PLATFORM_COMMISSION_RATE: ${PLATFORM_COMMISSION_RATE:-10}
       # Délai (en heures) avant l'annulation automatique d'une commande non payée (0 = jamais)
       UNPAID_ORDER_EXPIRY_HOURS: ${UNPAID_ORDER_EXPIRY_HOURS:-48}
+      # Relances automatiques (0 = désactivée) : rappel de paiement avant annulation, retard d'expédition, stock bas
+      PAYMENT_REMINDER_HOURS_BEFORE_EXPIRY: ${PAYMENT_REMINDER_HOURS_BEFORE_EXPIRY:-12}
+      SELLER_SHIPPING_ALERT_HOURS: ${SELLER_SHIPPING_ALERT_HOURS:-48}
+      LOW_STOCK_THRESHOLD: ${LOW_STOCK_THRESHOLD:-5}
       # E-mails (optionnel : sans SMTP, les envois sont simplement ignorés)
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}

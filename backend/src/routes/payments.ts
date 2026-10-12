@@ -350,7 +350,8 @@ router.patch('/admin/:orderId/reject', authenticate, requirePlatformAdmin, async
 
     await prisma.order.updateMany({
       where: { id: { in: toReject.map((o) => o.id) } },
-      data: { paymentStatus: 'rejected', paymentRejectionReason: reason },
+      // Nouveau délai de paiement : le client recevra un nouveau rappel avant l'annulation automatique
+      data: { paymentStatus: 'rejected', paymentRejectionReason: reason, paymentReminderSentAt: null },
     });
 
     const buyer = buyerOf(orders[0]);
