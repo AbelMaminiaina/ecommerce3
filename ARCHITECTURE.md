@@ -28,7 +28,8 @@ ecommerce3/
 | `routes/` | Un fichier par ressource | Reçoit la requête, valide, interroge Prisma, répond |
 | `middleware/auth.ts` | Contrôle d'accès | Les droits se déclarent **sur la route**, jamais dans le corps du handler |
 | `lib/` | Logique métier pure et clients techniques | Pas d'accès `req`/`res` ; fonctions testables unitairement |
-| `services/` | Effets de bord et orchestration | E-mails, déroulé des paiements Mobile Money |
+| `services/` | Effets de bord et orchestration | E-mails, déroulé des paiements Mobile Money, tâches récurrentes (`jobs.ts`) |
+| `worker.ts` | Point d'entrée du worker séparé (`npm run worker`) | N'exécute que les tâches récurrentes, pas d'Express |
 | `testing/` | Faux serveurs des opérateurs | Pour le développement local (`npm run mock:*`) |
 | `prisma/` | Schéma, migrations, seed, scripts de catalogue | — |
 
@@ -59,6 +60,13 @@ ecommerce3/
    `src/scripts/migrateImagesToFiles.ts` convertit les anciennes images base64 (lancé à chaque démarrage du conteneur).
 7. **Imports** ESM avec l'extension `.js` : `import { x } from '../lib/pricing.js'`.
 8. **Tests** : Vitest, à côté du fichier (`x.ts` + `x.test.ts`). Prisma et Redis sont simulés via `lib/__mocks__`.
+9. **Tâches récurrentes** : jamais de `setInterval` dans un service. Le service exporte une fonction
+   `xxxJob(): RecurringJob | null` (`null` = désactivée par la configuration) qui fait une seule passe,
+   ajoutée à la liste de `services/recurringJobs.ts`. `services/jobs.ts` les planifie dans une file BullMQ
+   (Redis TCP, `REDIS_URL`) : une passe n'est exécutée qu'une fois, même avec plusieurs instances.
+   Sans `REDIS_URL`, repli sur des minuteries dans le processus. Les tâches tournent dans l'API par défaut ;
+   `JOBS_IN_API=false` + `npm run worker` les déplacent dans un processus séparé (incompatible avec `DEMO_PAYMENTS`).
+   Une passe doit pouvoir s'exécuter deux fois sans dégât (mise à jour conditionnelle, comme `orderExpiry.ts`).
 
 ---
 

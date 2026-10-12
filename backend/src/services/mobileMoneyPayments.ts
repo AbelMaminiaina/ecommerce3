@@ -10,6 +10,7 @@ import { getPaypalConfig } from '../lib/paypal.js';
 import { normalizeMalagasyMobile } from '../lib/phone.js';
 import type { GroupOrder } from '../lib/paymentGroup.js';
 import { markOrdersPaid, type BuyerOrder } from './paymentSettlement.js';
+import type { RecurringJob } from './jobs.js';
 
 // Paiement automatique par l'API d'un prestataire (MVola, Orange Money, Airtel Money, Stripe, PayPal) : le site
 // vérifie le résultat AUPRÈS DU PRESTATAIRE (requête authentifiée) puis passe les commandes en « payées ».
@@ -336,7 +337,8 @@ export async function reconcilePendingAttempts(): Promise<number> {
   return pending.length;
 }
 
-export function startAutoPaymentReconcileJob(): void {
+// Tâche récurrente (services/jobs.ts) ; null si aucun paiement automatique n'est configuré
+export function autoPaymentReconcileJob(): RecurringJob | null {
   const configs: Record<OperatorId, () => { sandbox: boolean; baseUrl: string } | null> = {
     mvola: getMvolaConfig,
     orange_money: getOrangeConfig,
@@ -356,7 +358,6 @@ export function startAutoPaymentReconcileJob(): void {
     enabled++;
     console.log(`Paiement ${operator.label} automatique : activé (${config.sandbox ? 'BAC À SABLE' : 'PRODUCTION'}, ${config.baseUrl})`);
   }
-  if (enabled === 0) return;
-  const run = () => reconcilePendingAttempts().catch((err) => console.error('Payment reconcile job failed:', err));
-  setInterval(run, RECONCILE_INTERVAL_MS).unref();
+  if (enabled === 0) return null;
+  return { name: 'payment-reconcile', everyMs: RECONCILE_INTERVAL_MS, run: () => reconcilePendingAttempts() };
 }

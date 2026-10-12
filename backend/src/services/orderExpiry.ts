@@ -2,6 +2,7 @@ import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { EXPIRY_CANCEL_REASON, unpaidOrderExpiryHours } from '../lib/orderExpiry.js';
 import { sendOrderCancellationEmail } from './emailService.js';
+import type { RecurringJob } from './jobs.js';
 
 const UNPAID = ['awaiting', 'rejected'] as const;
 const BATCH_SIZE = 200;
@@ -83,14 +84,11 @@ export async function expireUnpaidOrders(now: Date = new Date()): Promise<{ canc
   return { cancelled };
 }
 
-// Vérification périodique, lancée au démarrage du serveur (le premier passage rattrape un éventuel retard)
-export function startOrderExpiryJob(): void {
+// Tâche récurrente (services/jobs.ts) ; null si l'annulation automatique est désactivée
+export function orderExpiryJob(): RecurringJob | null {
   if (unpaidOrderExpiryHours() <= 0) {
     console.log('Annulation automatique des commandes non payées : désactivée');
-    return;
+    return null;
   }
-  const run = () =>
-    expireUnpaidOrders().catch((err) => console.error('Order expiry job failed:', err));
-  setTimeout(run, 30 * 1000).unref();
-  setInterval(run, CHECK_INTERVAL_MS).unref();
+  return { name: 'order-expiry', everyMs: CHECK_INTERVAL_MS, run: () => expireUnpaidOrders() };
 }

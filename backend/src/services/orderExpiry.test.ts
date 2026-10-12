@@ -13,7 +13,7 @@ vi.mock('./emailService.js', () => ({
 import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { sendOrderCancellationEmail } from './emailService.js';
-import { expireUnpaidOrders } from './orderExpiry.js';
+import { expireUnpaidOrders, orderExpiryJob } from './orderExpiry.js';
 
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
 
@@ -189,5 +189,19 @@ describe('expireUnpaidOrders', () => {
     expect(result.cancelled).toEqual([]);
     expect(prismaMock.order.findMany).not.toHaveBeenCalled();
     expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('orderExpiryJob', () => {
+  it('planifie la vérification toutes les 10 minutes', () => {
+    const job = orderExpiryJob();
+    expect(job).toMatchObject({ name: 'order-expiry', everyMs: 10 * 60 * 1000 });
+  });
+
+  it('aucune tâche quand l’annulation automatique est désactivée (0 h)', () => {
+    process.env.UNPAID_ORDER_EXPIRY_HOURS = '0';
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    expect(orderExpiryJob()).toBeNull();
+    log.mockRestore();
   });
 });

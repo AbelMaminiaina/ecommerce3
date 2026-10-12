@@ -12,9 +12,9 @@ import sellersRouter from './routes/sellers.js';
 import paymentsRouter from './routes/payments.js';
 import payoutsRouter from './routes/payouts.js';
 import autoPaymentsRouter from './routes/autoPayments.js';
-import { startAutoPaymentReconcileJob } from './services/mobileMoneyPayments.js';
 import { setupDemoPayments } from './services/demoPayments.js';
-import { startOrderExpiryJob } from './services/orderExpiry.js';
+import { startJobs, stopJobsOnSignals } from './services/jobs.js';
+import { recurringJobs } from './services/recurringJobs.js';
 import adminProductsRouter from './routes/adminProducts.js';
 import uploadsRouter from './routes/uploads.js';
 import { UPLOAD_DIR, UPLOADS_URL_PREFIX } from './lib/uploads.js';
@@ -122,10 +122,11 @@ async function start() {
   // Démo uniquement (DEMO_PAYMENTS=true) : opérateurs Mobile Money simulés, avant la lecture de leur configuration
   setupDemoPayments(app, Number(PORT));
 
-  // Annule les commandes non payées passé le délai (libère le stock réservé)
-  startOrderExpiryJob();
-  // Vérifie auprès des opérateurs (MVola, Orange Money, Airtel Money) les paiements automatiques en attente
-  startAutoPaymentReconcileJob();
+  // Tâches récurrentes : annulation des commandes non payées, vérification des paiements automatiques…
+  // Exécutées ici par défaut ; JOBS_IN_API=false les confie au worker séparé (npm run worker).
+  startJobs(recurringJobs(), { processJobs: process.env.JOBS_IN_API !== 'false' })
+    .then(stopJobsOnSignals)
+    .catch((err) => console.error('Jobs startup failed:', err));
 }
 
 start().catch(console.error);
