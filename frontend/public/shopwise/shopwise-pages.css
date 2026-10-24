@@ -1452,3 +1452,18 @@
 .sw-skel-square { aspect-ratio: 1 / 1; border-radius: 8px; }
 .sw-skel-card-block { height: 200px; border-radius: 8px; }
 .sw-skel-profile { height: 170px; border-radius: 8px; }
+
+/* Connexion : choix Téléphone (code SMS) / E-mail */
+.auth .auth-methods {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 20px;
+  border-radius: 8px; background: color-mix(in srgb, var(--sw-text), transparent 94%);
+}
+.auth .auth-methods button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--sw-text); font-size: 14px; font-weight: 500;
+}
+.auth .auth-methods button.active { background: var(--sw-surface); color: var(--sw-accent); box-shadow: 0 1px 3px color-mix(in srgb, var(--sw-text), transparent 85%); }
+.auth .auth-hint { display: block; margin-top: 6px; font-size: 12.5px; color: color-mix(in srgb, var(--sw-text), transparent 35%); }
+.auth .auth-link-button { border: 0; background: none; padding: 0; font-size: 13px; color: var(--sw-accent); }
+.auth .auth-link-button:disabled { color: color-mix(in srgb, var(--sw-text), transparent 45%); }
+.auth .auth-code-input { font-size: 22px; letter-spacing: .5em; text-align: center; font-variant-numeric: tabular-nums; }

@@ -10,6 +10,7 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - Conseiller IA : le client décrit son besoin, l'IA (Mistral, puis Gemini en secours) propose jusqu'à 4 produits du catalogue ; sans clé ou en cas de panne, recherche par mots-clés. Section sur l'accueil et le catalogue, bouton flottant « Conseil » ailleurs ; 10 questions par heure et par visiteur, réponses en cache 1 h
 - Panier persistant côté client (Zustand + localStorage), avec ajout/suppression/modification de quantité
 - Commande sans compte (guest checkout)
+- Connexion par téléphone sans mot de passe : code à 6 chiffres envoyé par SMS (valable 10 min, 5 essais, 1 minute entre deux envois, 5 codes par heure et par numéro). Un numéro inconnu crée un compte particulier (prénom + nom, sans e-mail) ; un compte créé par e-mail peut ajouter son numéro depuis « Mon compte »
 - Frais de livraison calculés automatiquement (standard, express, retrait sur place) avec livraison gratuite au-delà de 200 000 Ar
 - Suivi de commande côté client par numéro de commande ou par e-mail
 
@@ -17,6 +18,11 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 
 - Paiement par Mobile Money (MVola) : instructions de paiement envoyées par e-mail après commande
 - Gestion du statut de commande (en attente / en préparation) selon la disponibilité du stock au moment de l'achat
+
+## SMS
+
+- Prestataire au choix (`SMS_PROVIDER`) : API SMS Madagascar d'Orange Developer, Twilio, ou mode démonstration (code affiché à l'écran, aucun SMS envoyé)
+- SMS de suivi au mobile de l'acheteur, en plus des e-mails : commande enregistrée (montant, numéro marchand, date limite), rappel de paiement, paiement reçu, commande expédiée / prête / livrée, annulation. Textes sans accents de 160 caractères au plus (un seul SMS facturé). Désactivables avec `SMS_ORDER_NOTIFICATIONS=false`
 
 ## Emails transactionnels
 

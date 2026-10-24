@@ -9,6 +9,7 @@ import {
   sendOrderShippedEmail,
   sendOrderDeliveredEmail,
 } from '../services/emailService.js';
+import { sendOrderPlacedSms, sendOrderStatusSms } from '../services/smsNotifications.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { computeShippingCost } from '../lib/shipping.js';
 import { resolveUnitPrice } from '../lib/pricing.js';
@@ -292,7 +293,9 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
             ? guest.name
             : `${customerUser!.firstName} ${customerUser!.lastName}`,
         contactEmail: company ? company.contactEmail : guest ? guest.email : customerUser!.email,
-        contactPhone: (company ? company.contactPhone : guest ? guest.phone : customerUser!.phone) ?? undefined,
+        contactPhone:
+          (company ? company.contactPhone : guest ? guest.phone : customerUser!.verifiedPhone ?? customerUser!.phone) ??
+          undefined,
         address: address
           ? {
               street: address.street,
@@ -351,6 +354,16 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         },
       }).catch((err) => console.error('Failed to send email:', err));
     }
+
+    // Un seul SMS pour tout le panier (montant total, même moyen de paiement)
+    sendOrderPlacedSms({
+      phone: emailDatas[0]?.contactPhone,
+      orderNumbers: createdOrders.map((o) => o.orderNumber),
+      totalAmount,
+      paymentNumber: paymentMethod.number,
+      paymentLabel: paymentMethod.label,
+      expiresAt,
+    });
 
     const first = createdOrders[0];
 
@@ -519,7 +532,7 @@ router.get('/orders/seller', authenticate, requireApprovedCompany, async (req: R
       where: { sellerId: req.user!.companyId! },
       include: {
         company: true,
-        user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+        user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
         address: true,
         items: { include: { product: { select: { name: true, slug: true } } } },
       },
@@ -642,7 +655,7 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
       },
       include: {
         company: true,
-        user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+        user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
         customer: true,
         address: true,
         items: {
@@ -683,6 +696,16 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
 
     const companyName = order.company?.name ?? (order.user ? `${order.user.firstName} ${order.user.lastName}` : order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : order.guestName ?? 'N/A');
     const contactEmail = order.company?.contactEmail ?? order.user?.email ?? order.customer?.email ?? order.guestEmail ?? null;
+    const contactPhone =
+      order.company?.contactPhone ??
+      order.user?.verifiedPhone ??
+      order.user?.phone ??
+      order.customer?.phone ??
+      order.guestPhone;
+
+    if (status === 'shipped' || status === 'delivered' || status === 'cancelled') {
+      sendOrderStatusSms({ phone: contactPhone, orderNumber: order.orderNumber, status, pickup: order.deliveryMethod === 'retrait' });
+    }
 
     // Envoi asynchrone des emails de notification (ne bloque pas la réponse)
     if (status === 'cancelled' && contactEmail) {

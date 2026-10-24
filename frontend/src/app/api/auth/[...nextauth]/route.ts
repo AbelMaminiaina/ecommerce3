@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt';
 import { SERVER_API_BASE_URL } from '@/lib/api/config';
+import { NEEDS_PROFILE } from '@/lib/api/auth';
 
 // La session du site dure tant que le jeton du backend (7 jours) : elle est revérifiée auprès du backend
 // toutes les 5 minutes, pour qu'un compte supprimé soit déconnecté et qu'un changement de rôle ou de statut
@@ -31,6 +32,22 @@ async function checkSession(token: JWT): Promise<JWT> {
   }
 }
 
+// Session NextAuth à partir de la réponse de connexion du backend (mot de passe ou code SMS)
+function sessionUser(data: any) {
+  return {
+    id: data.user.id,
+    name: `${data.user.firstName} ${data.user.lastName}`,
+    // Compte créé par SMS : pas d'e-mail
+    email: data.user.email ?? null,
+    phone: data.user.phone ?? null,
+    role: data.user.role,
+    companyId: data.company?.id ?? null,
+    companyName: data.company?.name ?? null,
+    companyStatus: data.company?.status ?? null,
+    accessToken: data.token,
+  };
+}
+
 const handler = NextAuth({
   providers: [
     CredentialsProvider({
@@ -54,18 +71,38 @@ const handler = NextAuth({
 
         if (!res.ok) return null;
 
-        const data = await res.json();
+        return sessionUser(await res.json());
+      },
+    }),
+    // Connexion par code SMS (POST /api/auth/phone/verify). Les erreurs remontent telles quelles au formulaire
+    // (signIn(..., { redirect: false }).error) : « Code incorrect », ou NEEDS_PROFILE pour un nouveau client.
+    CredentialsProvider({
+      id: 'phone',
+      name: 'Téléphone',
+      credentials: {
+        phone: { label: 'Téléphone', type: 'tel' },
+        code: { label: 'Code reçu par SMS', type: 'text' },
+        firstName: { label: 'Prénom', type: 'text' },
+        lastName: { label: 'Nom', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.phone || !credentials?.code) return null;
 
-        return {
-          id: data.user.id,
-          name: `${data.user.firstName} ${data.user.lastName}`,
-          email: data.user.email,
-          role: data.user.role,
-          companyId: data.company?.id ?? null,
-          companyName: data.company?.name ?? null,
-          companyStatus: data.company?.status ?? null,
-          accessToken: data.token,
-        };
+        const res = await fetch(`${SERVER_API_BASE_URL}/auth/phone/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: credentials.phone,
+            code: credentials.code,
+            firstName: credentials.firstName || undefined,
+            lastName: credentials.lastName || undefined,
+          }),
+        });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) throw new Error(data?.error || 'Connexion impossible pour le moment');
+        if (data?.needsProfile) throw new Error(NEEDS_PROFILE);
+        return sessionUser(data);
       },
     }),
   ],
@@ -74,6 +111,7 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.accessToken = user.accessToken;
+        token.phone = user.phone ?? null;
         token.role = user.role;
         token.companyId = user.companyId;
         token.companyName = user.companyName;
@@ -89,6 +127,7 @@ const handler = NextAuth({
       if (token.error) return { ...session, user: undefined, accessToken: undefined, error: token.error };
       if (session.user) {
         session.accessToken = token.accessToken;
+        session.user.phone = token.phone ?? null;
         session.user.role = token.role;
         session.user.companyId = token.companyId;
         session.user.companyName = token.companyName;

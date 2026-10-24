@@ -250,7 +250,7 @@ router.get('/admin', authenticate, requirePlatformAdmin, async (req: Request, re
       include: {
         seller: { select: { name: true } },
         company: { select: { name: true, contactEmail: true, contactPhone: true } },
-        user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+        user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -298,7 +298,7 @@ async function loadGroupForAdmin(orderId: string) {
     where: order.checkoutGroup ? { checkoutGroup: order.checkoutGroup } : { id: order.id },
     include: {
       company: { select: { name: true, contactEmail: true, contactPhone: true } },
-      user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
     },
   });
 }

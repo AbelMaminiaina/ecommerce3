@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { PageHeader } from '@/components/shop/PageHeader';
 import { AuthAside, SocialAuth, PasswordField, PasswordStrength } from '@/components/shopwise/auth';
-import { registerCompany, registerCustomer } from '@/lib/api/auth';
+import { getPhoneLoginStatus, registerCompany, registerCustomer } from '@/lib/api/auth';
 import { subscribeToNewsletter } from '@/lib/api/newsletter';
 
 type AccountType = 'particulier' | 'professionnel';
@@ -42,6 +42,18 @@ function InscriptionContent() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [companySubmitted, setCompanySubmitted] = useState(false);
+  // Particuliers sans e-mail : la connexion par SMS crée aussi le compte
+  const [phoneEnabled, setPhoneEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPhoneLoginStatus()
+      .then((status) => !cancelled && setPhoneEnabled(status.enabled))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isPro = type === 'professionnel';
 
@@ -159,6 +171,19 @@ function InscriptionContent() {
                       <h3>Rejoignez Tsena</h3>
                       <p>Créez votre compte en moins d&apos;une minute et profitez de tous vos avantages.</p>
                     </div>
+
+                    {phoneEnabled && (
+                      <div className="alert alert-info d-flex gap-2 align-items-start" role="note">
+                        <i className="bi bi-phone"></i>
+                        <span>
+                          Pas d&apos;adresse e-mail ?{' '}
+                          <Link href={`/connexion?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
+                            Créez votre compte avec votre numéro de mobile
+                          </Link>
+                          , un code vous est envoyé par SMS.
+                        </span>
+                      </div>
+                    )}
 
                     <div className="auth-type" role="radiogroup" aria-label="Type de compte">
                       {(['particulier', 'professionnel'] as const).map((t) => (

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { createHmac } from 'node:crypto';
 import type { UserRole } from '@prisma/client';
 
 // En production, un secret absent ou court rendrait les jetons falsifiables : on refuse de démarrer
@@ -34,4 +35,10 @@ export function signToken(payload: JwtPayload, expiresIn: string = JWT_EXPIRES_I
 export function verifyToken(token: string): JwtPayload {
   // Algorithme imposé : un jeton signé autrement (ou « none ») est refusé
   return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
+}
+
+// Empreinte d'un secret court (code SMS à 6 chiffres) : la clé du serveur empêche de retrouver le code
+// à partir d'une copie de la base, ce qu'un simple SHA-256 permettrait en essayant le million de valeurs
+export function keyedHash(value: string): string {
+  return createHmac('sha256', JWT_SECRET).update(value).digest('hex');
 }

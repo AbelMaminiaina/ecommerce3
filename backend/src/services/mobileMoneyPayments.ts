@@ -55,7 +55,7 @@ async function groupOfAttempt(attempt: PaymentAttempt): Promise<BuyerOrder[]> {
     where: attempt.checkoutGroup ? { checkoutGroup: attempt.checkoutGroup } : { id: attempt.orderId },
     include: {
       company: { select: { name: true, contactEmail: true, contactPhone: true } },
-      user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
     },
     orderBy: { createdAt: 'asc' },
   });

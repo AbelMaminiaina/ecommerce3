@@ -16,6 +16,7 @@ import { getProducts } from '@/lib/api/products';
 import { PAYMENT_STATUS_LABELS } from '@/lib/api/payments';
 import { formatPrice, getProductImage } from '@/lib/utils';
 import { CONTACT, CONTACT_MAILTO } from '@/lib/contact';
+import { PhoneLinkCard, formatMalagasyPhone } from '@/components/shopwise/PhoneLogin';
 
 type Panel = 'dashboard' | 'orders' | 'wishlist' | 'profile';
 const PANELS: Panel[] = ['dashboard', 'orders', 'wishlist', 'profile'];
@@ -216,9 +217,11 @@ export default function AccountPage() {
   }
 
   const user = session.user;
-  const fullName = user?.name || user?.email || 'Mon compte';
+  // Compte créé par SMS : pas d'e-mail, le numéro le remplace
+  const contact = user?.email || (user?.phone ? formatMalagasyPhone(user.phone) : '');
+  const fullName = user?.name || contact || 'Mon compte';
   const firstName = (user?.name || '').split(' ')[0];
-  const initials = (user?.name || user?.email || '?')
+  const initials = (user?.name || contact || '?')
     .split(/\s+/)
     .map((part) => part[0])
     .slice(0, 2)
@@ -273,7 +276,7 @@ export default function AccountPage() {
                   <div className="account-avatar">{initials}</div>
                   <div className="account-user-info">
                     <strong>{fullName}</strong>
-                    <span>{user?.email}</span>
+                    <span>{contact}</span>
                   </div>
                 </div>
                 <nav className="account-nav" role="tablist" aria-label="Sections du compte">
@@ -376,6 +379,7 @@ export default function AccountPage() {
                   <dl className="profile-list">
                     <div><dt>Nom</dt><dd>{user?.name || '—'}</dd></div>
                     <div><dt>Adresse e-mail</dt><dd>{user?.email || '—'}</dd></div>
+                    <div><dt>Téléphone</dt><dd>{user?.phone ? formatMalagasyPhone(user.phone) : '—'}</dd></div>
                     <div><dt>Type de compte</dt><dd>{ACCOUNT_TYPE_LABELS[user?.role ?? ''] ?? '—'}</dd></div>
                     {user?.companyName && <div><dt>Entreprise</dt><dd>{user.companyName}</dd></div>}
                     {user?.companyStatus && user.role !== 'customer' && (
@@ -392,6 +396,7 @@ export default function AccountPage() {
                     <a href={CONTACT_MAILTO}>{CONTACT.email}</a> depuis l&apos;adresse de votre compte.
                   </p>
                 </div>
+                {token && <PhoneLinkCard token={token} />}
               </div>
 
             </div>

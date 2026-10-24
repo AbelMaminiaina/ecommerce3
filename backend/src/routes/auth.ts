@@ -8,6 +8,10 @@ import { invalidateProductCache } from '../lib/cache.js';
 import { sendValidationError, singleMessage } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { failureLimiter, rateLimit } from '../lib/rateLimit.js';
+import { normalizeMalagasyMobile } from '../lib/phone.js';
+import { checkPhoneCode, createPhoneCode, CODE_TTL_MS, type CheckCodeResult } from '../lib/phoneCodes.js';
+import { isDemoSms, sendSms, smsEnabled } from '../lib/sms.js';
+import type { Company, User } from '@prisma/client';
 
 const router = Router();
 
@@ -147,6 +151,38 @@ router.post('/register', registerPerIp, async (req: Request, res: Response) => {
   }
 });
 
+type SessionClient = 'mobile' | undefined;
+
+// Réponse d'une connexion réussie (mot de passe ou code SMS) : jetons + profil
+async function sessionResponse(user: User & { company: Company | null }, client: SessionClient) {
+  const payload = { userId: user.id, role: user.role, companyId: user.companyId };
+  const token = client === 'mobile' ? signToken(payload, MOBILE_ACCESS_TOKEN_TTL) : signToken(payload);
+  // Application mobile : renouvelle la session sans redemander le mot de passe (POST /api/auth/refresh)
+  const refreshToken = await issueRefreshToken(user.id);
+
+  return {
+    success: true,
+    token,
+    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      phone: user.verifiedPhone ?? user.phone,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    },
+    company: user.company
+      ? {
+          id: user.company.id,
+          name: user.company.name,
+          status: user.company.status,
+          paymentTerms: user.company.paymentTerms,
+        }
+      : null,
+  };
+}
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -167,31 +203,7 @@ router.post('/login', loginPerIp, loginPerAccount, async (req: Request, res: Res
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
-    const payload = { userId: user.id, role: user.role, companyId: user.companyId };
-    const token = client === 'mobile' ? signToken(payload, MOBILE_ACCESS_TOKEN_TTL) : signToken(payload);
-    // Application mobile : renouvelle la session sans redemander le mot de passe (POST /api/auth/refresh)
-    const refreshToken = await issueRefreshToken(user.id);
-
-    res.json({
-      success: true,
-      token,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-      company: user.company
-        ? {
-            id: user.company.id,
-            name: user.company.name,
-            status: user.company.status,
-            paymentTerms: user.company.paymentTerms,
-          }
-        : null,
-    });
+    res.json(await sessionResponse(user, client));
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Données invalides', details: error.errors });
@@ -216,6 +228,9 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
+        phone: user.phone,
+        // Numéro vérifié par SMS : permet la connexion par téléphone
+        verifiedPhone: user.verifiedPhone,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
@@ -232,6 +247,177 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching current user:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ---------- Connexion par téléphone (code SMS) ----------
+// 1. POST /phone/request-code : un code à 6 chiffres est envoyé par SMS ;
+// 2. POST /phone/verify : le code ouvre la session. Numéro inconnu : le compte particulier est créé avec le prénom
+//    et le nom (s'ils manquent, la réponse `needsProfile` les demande sans consommer le code).
+
+const INVALID_PHONE = 'Numéro de mobile malgache invalide (ex. : 034 12 345 67)';
+const phoneField = z
+  .string({ message: INVALID_PHONE })
+  .max(30, INVALID_PHONE)
+  .transform((value, ctx) => {
+    const local = normalizeMalagasyMobile(value);
+    if (!local) ctx.addIssue({ code: z.ZodIssueCode.custom, message: INVALID_PHONE });
+    return local ?? '';
+  });
+const CODE = 'Le code reçu par SMS comporte 6 chiffres';
+const codeField = z.string({ message: CODE }).trim().regex(/^\d{6}$/, CODE);
+
+const phoneOf = (req: Request) => normalizeMalagasyMobile(String(req.body?.phone ?? '').slice(0, 30)) ?? 'invalide';
+// Un SMS coûte : 5 codes par numéro et par heure, et une limite large par adresse IP
+const codePerPhone = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  key: (req) => `phone|${phoneOf(req)}`,
+  message: 'Trop de codes demandés pour ce numéro. Réessayez dans une heure.',
+});
+const codePerIp = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: 'Trop de codes demandés depuis cette adresse. Réessayez plus tard.',
+});
+const verifyPerIp = rateLimit({
+  windowMs: QUARTER_HOUR,
+  max: 100,
+  message: 'Trop de tentatives depuis cette adresse. Réessayez dans 15 minutes.',
+});
+
+function sendCodeError(res: Response, result: Exclude<CheckCodeResult, 'ok'>) {
+  return res.status(401).json({
+    error: result === 'expired' ? 'Code expiré ou trop d’essais : demandez un nouveau code' : 'Code incorrect',
+  });
+}
+
+// Le site n'affiche la connexion par téléphone que si les SMS sont configurés
+router.get('/phone', (_req: Request, res: Response) => {
+  res.json({ enabled: smsEnabled(), demo: isDemoSms() });
+});
+
+const requestCodeSchema = z.object({ phone: phoneField });
+
+router.post('/phone/request-code', codePerIp, codePerPhone, async (req: Request, res: Response) => {
+  try {
+    const { phone } = requestCodeSchema.parse(req.body ?? {});
+    if (!smsEnabled()) {
+      return res.status(503).json({ error: 'La connexion par SMS est indisponible pour le moment' });
+    }
+
+    const created = await createPhoneCode(phone);
+    if (!created.ok) {
+      res.setHeader('Retry-After', String(created.retryAfter));
+      return res.status(429).json({ error: `Patientez ${created.retryAfter} secondes avant de demander un nouveau code` });
+    }
+
+    const minutes = CODE_TTL_MS / 60_000;
+    try {
+      // Texte sans accents : un SMS accentué est découpé en messages de 70 caractères au lieu de 160
+      await sendSms(phone, `Tsena Pro : votre code de connexion est ${created.code}. Il expire dans ${minutes} min. Ne le communiquez a personne.`);
+    } catch (error) {
+      console.error('Error sending login code SMS:', error);
+      return res.status(502).json({ error: "L'envoi du SMS a échoué. Réessayez dans quelques instants." });
+    }
+
+    res.json({
+      success: true,
+      expiresInSeconds: CODE_TTL_MS / 1000,
+      // Démonstration uniquement (SMS_PROVIDER=demo) : aucun SMS n'est envoyé, le code est affiché sur le site
+      ...(isDemoSms() ? { demoCode: created.code } : {}),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
+    console.error('Error requesting login code:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+const NAME = 'Prénom et nom requis (100 caractères maximum)';
+const verifyCodeSchema = z.object({
+  phone: phoneField,
+  code: codeField,
+  // Nouveau client : son nom (sinon la réponse `needsProfile` le demande)
+  firstName: z.string({ message: NAME }).trim().min(1, NAME).max(100, NAME).optional(),
+  lastName: z.string({ message: NAME }).trim().min(1, NAME).max(100, NAME).optional(),
+  client: z.enum(['mobile']).optional(),
+});
+
+router.post('/phone/verify', verifyPerIp, async (req: Request, res: Response) => {
+  try {
+    const { phone, code, firstName, lastName, client } = verifyCodeSchema.parse(req.body ?? {});
+
+    let user = await prisma.user.findUnique({ where: { verifiedPhone: phone }, include: { company: true } });
+    if (user?.deletedAt) user = null;
+
+    if (!user && !(firstName && lastName)) {
+      // Code vérifié mais pas consommé : il resservira avec le prénom et le nom
+      const result = await checkPhoneCode(phone, code, { consume: false });
+      if (result !== 'ok') return sendCodeError(res, result);
+      return res.json({ success: true, needsProfile: true });
+    }
+
+    const result = await checkPhoneCode(phone, code);
+    if (result !== 'ok') return sendCodeError(res, result);
+
+    if (!user) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            verifiedPhone: phone,
+            phone,
+            firstName: firstName!,
+            lastName: lastName!,
+            // Pas de mot de passe : la connexion se fait par code SMS
+            passwordHash: await hashPassword(randomBytes(32).toString('hex')),
+            role: 'customer',
+          },
+          include: { company: true },
+        });
+      } catch (error: any) {
+        // Deux validations simultanées du même numéro : le compte vient d'être créé par l'autre
+        if (error?.code !== 'P2002') throw error;
+        user = await prisma.user.findUnique({ where: { verifiedPhone: phone }, include: { company: true } });
+        if (!user) throw error;
+      }
+    }
+
+    res.json(await sessionResponse(user, client));
+  } catch (error) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
+    console.error('Error verifying login code:', error);
+    res.status(500).json({ error: 'Erreur lors de la connexion' });
+  }
+});
+
+const linkPhoneSchema = z.object({ phone: phoneField, code: codeField });
+
+// Ajoute un numéro vérifié à un compte existant (créé par e-mail) : il pourra ensuite se connecter par SMS
+router.post('/phone/link', authenticate, verifyPerIp, async (req: Request, res: Response) => {
+  try {
+    const { phone, code } = linkPhoneSchema.parse(req.body ?? {});
+    const owner = await prisma.user.findUnique({ where: { verifiedPhone: phone } });
+    if (owner && owner.id !== req.user!.userId) {
+      return res.status(409).json({ error: 'Ce numéro est déjà utilisé par un autre compte' });
+    }
+
+    const result = await checkPhoneCode(phone, code);
+    if (result !== 'ok') return sendCodeError(res, result);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user || user.deletedAt) return res.status(404).json({ error: 'Compte introuvable' });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { verifiedPhone: phone, ...(user.phone ? {} : { phone }) },
+    });
+
+    res.json({ success: true, verifiedPhone: phone });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) return sendValidationError(res, error);
+    if (error?.code === 'P2002') return res.status(409).json({ error: 'Ce numéro est déjà utilisé par un autre compte' });
+    console.error('Error linking phone:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -281,14 +467,20 @@ router.post('/logout', async (req: Request, res: Response) => {
   }
 });
 
-const deleteAccountSchema = z.object({ password: z.string().min(1) });
+// Mot de passe, ou code SMS pour un compte créé par téléphone (il n'a pas de mot de passe)
+const deleteAccountSchema = z
+  .object({ password: z.string().min(1).optional(), code: codeField.optional() })
+  .refine((body) => body.password || body.code);
 
 // Suppression du compte par l'utilisateur (exigée par l'App Store et le Play Store).
 // Les données personnelles sont effacées ; les commandes sont conservées (obligations comptables), rattachées
 // à un compte anonyme. Si c'était le dernier utilisateur d'une entreprise vendeuse, ses produits sont retirés de la vente.
 router.delete('/me', authenticate, async (req: Request, res: Response) => {
   try {
-    const { password } = deleteAccountSchema.parse(req.body ?? {}, singleMessage('Mot de passe requis pour supprimer le compte'));
+    const { password, code } = deleteAccountSchema.parse(
+      req.body ?? {},
+      singleMessage('Mot de passe (ou code reçu par SMS) requis pour supprimer le compte')
+    );
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
     if (!user || user.deletedAt) {
       return res.status(404).json({ error: 'Compte introuvable' });
@@ -301,9 +493,17 @@ router.delete('/me', authenticate, async (req: Request, res: Response) => {
       res.setHeader('Retry-After', String(retryAfter));
       return res.status(429).json({ error: 'Trop de mots de passe incorrects. Réessayez dans 15 minutes.' });
     }
-    if (!(await comparePassword(password, user.passwordHash))) {
-      deletePasswordFailures.fail(user.id);
-      return res.status(401).json({ error: 'Mot de passe incorrect' });
+    if (password) {
+      if (!(await comparePassword(password, user.passwordHash))) {
+        deletePasswordFailures.fail(user.id);
+        return res.status(401).json({ error: 'Mot de passe incorrect' });
+      }
+    } else {
+      if (!user.verifiedPhone) {
+        return res.status(400).json({ error: 'Aucun numéro vérifié sur ce compte : saisissez votre mot de passe' });
+      }
+      const result = await checkPhoneCode(user.verifiedPhone, code!);
+      if (result !== 'ok') return sendCodeError(res, result);
     }
     deletePasswordFailures.reset(user.id);
 
@@ -318,6 +518,7 @@ router.delete('/me', authenticate, async (req: Request, res: Response) => {
           firstName: 'Compte',
           lastName: 'supprimé',
           phone: null,
+          verifiedPhone: null,
           passwordHash: unusablePassword,
           deletedAt: new Date(),
         },

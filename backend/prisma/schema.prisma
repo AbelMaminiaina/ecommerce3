@@ -149,13 +149,17 @@ model Company {
 
 // Utilisateur (rattaché à une entreprise, sauf le staff plateforme)
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  phone        String?
-  role         UserRole
+  id            String   @id @default(uuid())
+  // Facultatif : un compte créé par SMS n'a que son numéro de téléphone (verifiedPhone)
+  email         String?  @unique
+  // Compte créé par SMS : mot de passe aléatoire inutilisable (connexion par code uniquement)
+  passwordHash  String
+  firstName     String
+  lastName      String
+  phone         String? // Téléphone de contact, saisi librement
+  // Mobile malgache vérifié par un code SMS (format 0341234567) : sert à la connexion par téléphone
+  verifiedPhone String?  @unique
+  role          UserRole
 
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
@@ -187,6 +191,19 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// Code de connexion envoyé par SMS : seule son empreinte est stockée, valable quelques minutes
+model PhoneCode {
+  id        String   @id @default(uuid())
+  phone     String // Format local 0341234567
+  codeHash  String
+  attempts  Int      @default(0) // Essais erronés : le code est invalidé au-delà de la limite
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@map("phone_codes")
 }
 
 // Palier de prix dégressif par quantité (au-delà de minQty, le prix unitaire devient unitPrice)

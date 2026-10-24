@@ -10,6 +10,8 @@ declare module 'next-auth' {
     user?: {
       name?: string | null;
       email?: string | null;
+      /** Téléphone du compte (vérifié par SMS pour un compte créé par téléphone) */
+      phone?: string | null;
       image?: string | null;
       role?: UserRole;
       companyId?: string | null;
@@ -19,6 +21,7 @@ declare module 'next-auth' {
   }
 
   interface User {
+    phone?: string | null;
     role: UserRole;
     companyId: string | null;
     companyName?: string | null;
@@ -30,6 +33,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     accessToken?: string;
+    phone?: string | null;
     role?: UserRole;
     companyId?: string | null;
     companyName?: string | null;

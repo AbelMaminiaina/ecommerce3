@@ -2,17 +2,18 @@ import type { Order } from '@prisma/client';
 import prisma from '../lib/prisma.js';
 import { effectiveCommissionRate, splitOrderAmounts } from '../lib/commission.js';
 import { sendPaymentConfirmedEmail } from './emailService.js';
+import { sendPaymentConfirmedSms } from './smsNotifications.js';
 
 export type BuyerOrder = Order & {
   company?: { name: string; contactEmail: string; contactPhone?: string | null } | null;
-  user?: { firstName: string; lastName: string; email: string; phone?: string | null } | null;
+  user?: { firstName: string; lastName: string; email: string | null; phone?: string | null; verifiedPhone?: string | null } | null;
 };
 
 export function buyerOf(order: BuyerOrder) {
   return {
     name: order.company?.name ?? (order.user ? `${order.user.firstName} ${order.user.lastName}` : order.guestName ?? 'N/A'),
     email: order.company?.contactEmail ?? order.user?.email ?? order.guestEmail ?? null,
-    phone: order.company?.contactPhone ?? order.user?.phone ?? order.guestPhone ?? null,
+    phone: order.company?.contactPhone ?? order.user?.verifiedPhone ?? order.user?.phone ?? order.guestPhone ?? null,
   };
 }
 
@@ -59,6 +60,11 @@ export async function markOrdersPaid(params: {
   }
 
   const buyer = buyerOf(buyerOrder);
+  sendPaymentConfirmedSms({
+    phone: buyer.phone,
+    orderNumbers: orders.map((o) => o.orderNumber),
+    totalAmount: orders.reduce((sum, o) => sum + o.total, 0),
+  });
   if (buyer.email) {
     sendPaymentConfirmedEmail({
       orderNumbers: orders.map((o) => o.orderNumber),

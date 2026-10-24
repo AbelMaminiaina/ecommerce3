@@ -17,7 +17,8 @@ interface Address {
 interface OrderData {
   orderNumber: string;
   companyName: string;
-  contactEmail: string;
+  /** null : compte créé par SMS, sans e-mail (seul l'administrateur est prévenu par e-mail) */
+  contactEmail: string | null;
   contactPhone?: string;
   address: Address | null;
   deliveryMethod: string;
@@ -369,7 +370,7 @@ function generateAdminNotificationHTML(order: OrderData): string {
       </tr>
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><strong>Contact:</strong></td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><a href="mailto:${order.contactEmail}">${order.contactEmail}</a></td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${order.contactEmail ? `<a href="mailto:${order.contactEmail}">${order.contactEmail}</a>` : ''}${order.contactPhone ? `${order.contactEmail ? '<br>' : ''}${order.contactPhone}` : ''}</td>
       </tr>
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><strong>Adresse:</strong></td>
@@ -740,19 +741,21 @@ export async function sendOrderConfirmationEmail(order: OrderData): Promise<bool
       return false;
     }
 
-    const transporter = createTransporter();
-    const customerHTML = generateCustomerEmailHTML(escapeHtmlDeep(order));
+    if (order.contactEmail) {
+      const transporter = createTransporter();
+      const customerHTML = generateCustomerEmailHTML(escapeHtmlDeep(order));
 
-    const statusText = 'En attente de paiement';
+      const statusText = 'En attente de paiement';
 
-    await transporter.sendMail({
-      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
-      to: order.contactEmail,
-      subject: `✅ Commande ${order.orderNumber} - ${statusText}`,
-      html: customerHTML,
-    });
+      await transporter.sendMail({
+        from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+        to: order.contactEmail,
+        subject: `✅ Commande ${order.orderNumber} - ${statusText}`,
+        html: customerHTML,
+      });
 
-    console.log(`✉️ Email client envoyé à ${order.contactEmail} pour commande ${order.orderNumber}`);
+      console.log(`✉️ Email client envoyé à ${order.contactEmail} pour commande ${order.orderNumber}`);
+    }
 
     await sendAdminNotificationEmail(order);
 

@@ -144,7 +144,7 @@ export function ShopwiseHeader() {
                     <>
                       <div className="sw-flyout-header">
                         <h6>{displayName || 'Mon compte'}</h6>
-                        <p>{session.user?.email}</p>
+                        <p>{session.user?.email || session.user?.phone}</p>
                       </div>
                       {session.user?.role !== 'platform_admin' && <span className="sw-flyout-status">{accountLabel}</span>}
                       <div className="sw-flyout-links">

@@ -113,6 +113,17 @@ services:
       MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-latest}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      # SMS (codes de connexion par téléphone + suivi des commandes) : orange, twilio, ou demo (code affiché à l'écran,
+      # démonstration uniquement). Vide = pas de SMS ni de connexion par téléphone.
+      SMS_PROVIDER: ${SMS_PROVIDER:-}
+      ORANGE_SMS_CLIENT_ID: ${ORANGE_SMS_CLIENT_ID:-}
+      ORANGE_SMS_CLIENT_SECRET: ${ORANGE_SMS_CLIENT_SECRET:-}
+      ORANGE_SMS_SENDER: ${ORANGE_SMS_SENDER:-tel:+2610000}
+      ORANGE_SMS_SENDER_NAME: ${ORANGE_SMS_SENDER_NAME:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      SMS_ORDER_NOTIFICATIONS: ${SMS_ORDER_NOTIFICATIONS:-true}
     volumes:
       # Photos des produits téléversées (à sauvegarder avec la base)
       - uploads_data:/app/uploads

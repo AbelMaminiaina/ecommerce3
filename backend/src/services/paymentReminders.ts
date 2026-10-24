@@ -3,6 +3,7 @@ import { orderExpiresAt, unpaidOrderExpiryHours } from '../lib/orderExpiry.js';
 import { paymentReminderAt, paymentReminderHoursBefore, paymentReminderLeadHours } from '../lib/automationRules.js';
 import { siteUrl } from '../lib/siteUrl.js';
 import { sendPaymentReminderEmail } from './emailService.js';
+import { sendPaymentReminderSms } from './smsNotifications.js';
 import { buyerOf, type BuyerOrder } from './paymentSettlement.js';
 import type { RecurringJob } from './jobs.js';
 
@@ -31,7 +32,7 @@ export async function sendPaymentReminders(now: Date = new Date()): Promise<{ re
     },
     include: {
       company: { select: { name: true, contactEmail: true, contactPhone: true } },
-      user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
     },
     orderBy: { createdAt: 'asc' },
     take: BATCH_SIZE,
@@ -58,13 +59,15 @@ export async function sendPaymentReminders(now: Date = new Date()): Promise<{ re
     const numbers = orders.map((o) => o.orderNumber);
     reminded.push(...numbers);
     const buyer = buyerOf(orders[0]);
-    if (!buyer.email) continue;
     const expiresAt = new Date(Math.min(...orders.map((o) => orderExpiresAt(o, hours)!.getTime())));
+    const totalAmount = orders.reduce((sum, o) => sum + o.total, 0);
+    sendPaymentReminderSms({ phone: buyer.phone, orderNumbers: numbers, totalAmount, expiresAt });
+    if (!buyer.email) continue;
     sendPaymentReminderEmail({
       orderNumbers: numbers,
       companyName: buyer.name,
       contactEmail: buyer.email,
-      totalAmount: orders.reduce((sum, o) => sum + o.total, 0),
+      totalAmount,
       expiresAt,
       trackingUrl: `${siteUrl()}/suivi-commande?order=${encodeURIComponent(numbers[0])}&email=${encodeURIComponent(buyer.email)}`,
     }).catch((err) => console.error('Failed to send payment reminder email:', err));

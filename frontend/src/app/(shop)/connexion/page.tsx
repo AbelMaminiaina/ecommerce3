@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shop/PageHeader';
 import { AuthAside, SocialAuth, PasswordField } from '@/components/shopwise/auth';
+import { PhoneLoginForm } from '@/components/shopwise/PhoneLogin';
+import { getPhoneLoginStatus } from '@/lib/api/auth';
 import { CONTACT, CONTACT_MAILTO } from '@/lib/contact';
+
+type Method = 'phone' | 'email';
 
 // Connexion du template ShopWise (login.html) : carte formulaire + colonne des avantages client.
 function ConnexionContent() {
@@ -19,6 +23,29 @@ function ConnexionContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [showForgot, setShowForgot] = useState(false);
+  // Connexion par SMS proposée en premier quand le backend sait envoyer des SMS
+  const [phoneEnabled, setPhoneEnabled] = useState(false);
+  const [method, setMethod] = useState<Method>('email');
+
+  useEffect(() => {
+    let cancelled = false;
+    getPhoneLoginStatus()
+      .then((status) => {
+        if (cancelled || !status.enabled) return;
+        setPhoneEnabled(true);
+        // Après un échec de connexion par e-mail (?error=…), rester sur l'e-mail
+        if (!urlError) setMethod('phone');
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [urlError]);
+
+  const onPhoneSuccess = () => {
+    setSuccess('Bienvenue ! Redirection en cours…');
+    router.push(callbackUrl);
+  };
   const [error, setError] = useState<string | null>(
     urlError === 'CredentialsSignin' ? 'Adresse e-mail ou mot de passe incorrect.' : null
   );
@@ -61,6 +88,37 @@ function ConnexionContent() {
                   <h3>Bon retour parmi nous</h3>
                   <p>Connectez-vous pour suivre vos commandes et retrouver vos favoris.</p>
                 </div>
+
+                {phoneEnabled && (
+                  <div className="auth-methods" role="tablist" aria-label="Mode de connexion">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={method === 'phone'}
+                      className={method === 'phone' ? 'active' : undefined}
+                      onClick={() => setMethod('phone')}
+                    >
+                      <i className="bi bi-phone"></i> Téléphone
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={method === 'email'}
+                      className={method === 'email' ? 'active' : undefined}
+                      onClick={() => setMethod('email')}
+                    >
+                      <i className="bi bi-envelope"></i> E-mail
+                    </button>
+                  </div>
+                )}
+
+                {method === 'phone' ? (
+                  success ? (
+                    <div className="alert alert-success" role="status">{success}</div>
+                  ) : (
+                    <PhoneLoginForm onSuccess={onPhoneSuccess} />
+                  )
+                ) : (
                 <form onSubmit={handleSubmit} noValidate>
                   <div className="row g-3">
                     <div className="col-12">
@@ -121,6 +179,7 @@ function ConnexionContent() {
                     </div>
                   </div>
                 </form>
+                )}
 
                 <SocialAuth label="ou continuer avec" />
 

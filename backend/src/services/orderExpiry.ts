@@ -2,6 +2,7 @@ import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { EXPIRY_CANCEL_REASON, unpaidOrderExpiryHours } from '../lib/orderExpiry.js';
 import { sendOrderCancellationEmail } from './emailService.js';
+import { sendOrderStatusSms } from './smsNotifications.js';
 import type { RecurringJob } from './jobs.js';
 
 const UNPAID = ['awaiting', 'rejected'] as const;
@@ -26,8 +27,8 @@ export async function expireUnpaidOrders(now: Date = new Date()): Promise<{ canc
     },
     include: {
       items: { include: { product: { select: { name: true } } } },
-      company: { select: { name: true, contactEmail: true } },
-      user: { select: { firstName: true, lastName: true, email: true } },
+      company: { select: { name: true, contactEmail: true, contactPhone: true } },
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
     },
     orderBy: { createdAt: 'asc' },
     take: BATCH_SIZE,
@@ -55,6 +56,12 @@ export async function expireUnpaidOrders(now: Date = new Date()): Promise<{ canc
       stockRestored = true;
     }
     cancelled.push(order.orderNumber);
+
+    sendOrderStatusSms({
+      phone: order.company?.contactPhone ?? order.user?.verifiedPhone ?? order.user?.phone ?? order.guestPhone,
+      orderNumber: order.orderNumber,
+      status: 'cancelled',
+    });
 
     const contactEmail = order.company?.contactEmail ?? order.user?.email ?? order.guestEmail;
     if (contactEmail) {
