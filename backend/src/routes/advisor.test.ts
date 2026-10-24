@@ -9,7 +9,7 @@ vi.mock('../lib/redis');
 
 import prisma from '../lib/prisma.js';
 import redis from '../lib/redis';
-import advisorRouter from './advisor.js';
+import advisorRouter, { resetAdvisorLimits } from './advisor.js';
 import { cleanMessage } from '../services/advisorService.js';
 
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
@@ -180,15 +180,27 @@ describe('POST /api/advisor', () => {
     expect(redis.get).toHaveBeenCalledWith('advisor:du ciment');
   });
 
-  it('rate-limits a visitor after 10 questions per hour', async () => {
+  it('limite les questions envoyées à l’IA par visiteur (20 par heure)', async () => {
+    resetAdvisorLimits();
+    process.env.MISTRAL_API_KEY = 'test-key';
+    fetchMock.mockResolvedValue({ ok: false, status: 500, text: async () => 'indisponible' });
     const app = buildApp();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const res = await ask(`question ${i}`, app);
       expect(res.status).toBe(200);
     }
 
     const res = await ask('encore une', app);
     expect(res.status).toBe(429);
+  });
+
+  it('ne limite pas la recherche par mots-clés (aucune clé d’IA)', async () => {
+    resetAdvisorLimits();
+    const app = buildApp();
+    for (let i = 0; i < 25; i++) {
+      const res = await ask(`question ${i}`, app);
+      expect(res.status).toBe(200);
+    }
   });
 });
 

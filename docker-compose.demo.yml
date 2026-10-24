@@ -113,6 +113,9 @@ services:
       MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-latest}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      # Questions envoyées à l'IA par heure : par compte ou appareil, et par adresse IP
+      ADVISOR_MAX_PER_HOUR: ${ADVISOR_MAX_PER_HOUR:-20}
+      ADVISOR_MAX_PER_IP_HOUR: ${ADVISOR_MAX_PER_IP_HOUR:-200}
       # SMS (codes de connexion par téléphone + suivi des commandes) : orange, twilio, ou demo (code affiché à l'écran,
       # démonstration uniquement). Vide = pas de SMS ni de connexion par téléphone.
       SMS_PROVIDER: ${SMS_PROVIDER:-}

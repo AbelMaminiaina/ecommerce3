@@ -39,6 +39,8 @@ export interface RequestOptions {
   /** false : n'envoie pas le jeton même si une session existe */
   auth?: boolean;
   signal?: AbortSignal;
+  /** En-têtes supplémentaires (ex. X-Visitor-Id du conseiller IA) */
+  headers?: Record<string, string>;
 }
 
 export interface ApiClient {
@@ -60,6 +62,7 @@ export function createApiClient({ baseUrl, session, onSessionExpired, fetch: fet
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (options.body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
+    Object.assign(headers, options.headers);
     return doFetch(`${base}${endpoint}`, {
       method: options.method ?? 'GET',
       headers,

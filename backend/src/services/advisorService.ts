@@ -219,6 +219,10 @@ type Provider = {
   ask: (question: string, catalog: CatalogItem[], apiKey: string) => Promise<Advice>;
 };
 
+/** Une IA est configurée : seules ses réponses coûtent (quota Mistral / Gemini) */
+export const aiConfigured = (env: NodeJS.ProcessEnv = process.env): boolean =>
+  Boolean(env.MISTRAL_API_KEY?.trim() || env.GEMINI_API_KEY?.trim());
+
 export async function getAdvice(question: string, catalog: CatalogItem[]): Promise<Advice> {
   if (catalog.length === 0) {
     return keywordAdvice(question, catalog);

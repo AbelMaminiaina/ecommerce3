@@ -126,9 +126,16 @@ export const promoApi = {
 // ---------- Conseiller IA ----------
 
 export const advisorApi = {
-  /** Question libre (3 à 500 caractères) : conseil et produits du catalogue ; 10 questions par heure */
-  ask: (api: ApiClient, question: string) =>
-    api.request<AdvisorResponse>('/advisor', { method: 'POST', body: { question }, auth: false }),
+  /**
+   * Question libre (3 à 500 caractères) : conseil et produits du catalogue. Les questions envoyées à l'IA sont
+   * limitées par compte (session) ou, sans compte, par appareil (`visitorId`) : pas par adresse IP seule.
+   */
+  ask: (api: ApiClient, question: string, visitorId?: string) =>
+    api.request<AdvisorResponse>('/advisor', {
+      method: 'POST',
+      body: { question },
+      ...(visitorId ? { headers: { 'X-Visitor-Id': visitorId } } : {}),
+    }),
 };
 
 // ---------- Livraison ----------
