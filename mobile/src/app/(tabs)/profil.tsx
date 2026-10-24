@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Message } from '../../components/ui';
 import { useAuth } from '../../features/auth/store';
+import { formatMalagasyPhone } from '../../features/auth/PhoneLoginForm';
 import { colors, fonts, radius } from '../../theme';
 
 const COMPANY_STATUS: Record<string, string> = {
@@ -74,7 +75,8 @@ export default function Profile() {
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.name}>{user ? `${user.firstName} ${user.lastName}` : 'Mon compte'}</Text>
-        {user ? <Text style={styles.email}>{user.email}</Text> : null}
+        {/* Compte créé par SMS : pas d'e-mail, le numéro le remplace */}
+        {user ? <Text style={styles.email}>{user.email ?? (user.phone ? formatMalagasyPhone(user.phone) : '')}</Text> : null}
         {company ? (
           <View style={styles.companyPill}>
             <Text style={styles.companyText}>
@@ -89,6 +91,7 @@ export default function Profile() {
         <MenuItem icon="heart-outline" label="Mes favoris" onPress={go('/favoris')} />
         <MenuItem icon="bag-handle-outline" label="Mon panier" onPress={go('/panier')} />
         <MenuItem icon="grid-outline" label="Catalogue" onPress={go('/catalogue')} />
+        <MenuItem icon="gift-outline" label="Parrainage" onPress={go('/compte/parrainage')} />
       </View>
 
       <View style={styles.menu}>

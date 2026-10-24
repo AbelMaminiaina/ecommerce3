@@ -21,8 +21,14 @@ interface AuthState {
   login: (data: LoginInput) => Promise<void>;
   /** Crée un compte particulier puis connecte */
   register: (data: RegisterCustomerInput) => Promise<void>;
+  /**
+   * Connexion par code SMS. Numéro inconnu sans prénom ni nom : renvoie 'needs-profile' (le même code
+   * resservira avec eux, et le compte particulier sera créé).
+   */
+  loginWithPhone: (data: { phone: string; code: string; firstName?: string; lastName?: string }) => Promise<'ok' | 'needs-profile'>;
   logout: () => Promise<void>;
-  deleteAccount: (password: string) => Promise<void>;
+  /** Mot de passe, ou code SMS pour un compte créé par téléphone */
+  deleteAccount: (proof: { password: string } | { code: string }) => Promise<void>;
 }
 
 const signedOut = { status: 'guest' as const, user: null, company: null };
@@ -57,6 +63,16 @@ export const useAuth = create<AuthState>()((set) => ({
     set({ status: 'signed-in', user, company });
   },
 
+  loginWithPhone: async (data) => {
+    const result = await authApi.verifyPhone(api, data);
+    if ('needsProfile' in result) return 'needs-profile';
+    const { token, refreshToken, user, company } = result;
+    await sessionStore.set({ token, refreshToken });
+    // Connecté par son numéro : il est vérifié (suppression du compte possible par code SMS)
+    set({ status: 'signed-in', user: { ...user, verifiedPhone: user.phone ?? data.phone }, company });
+    return 'ok';
+  },
+
   register: async (data) => {
     await authApi.register(api, data);
     const { token, refreshToken, user, company } = await authApi.login(api, { email: data.email, password: data.password }, 'mobile');
@@ -72,8 +88,8 @@ export const useAuth = create<AuthState>()((set) => ({
     if (session) authApi.logout(api, session).catch(() => undefined);
   },
 
-  deleteAccount: async (password) => {
-    await authApi.deleteAccount(api, password);
+  deleteAccount: async (proof) => {
+    await authApi.deleteAccount(api, proof);
     await sessionStore.clear();
     set(signedOut);
   },

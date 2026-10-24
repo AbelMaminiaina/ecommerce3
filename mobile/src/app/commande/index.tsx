@@ -148,6 +148,42 @@ export default function Checkout() {
           <ErrorText>{errors.method}</ErrorText>
         </Card>
 
+        <Card style={{ gap: 8 }}>
+          <Title style={styles.section}>Code promo</Title>
+          {form.promo ? (
+            <View style={[styles.notice, { flexDirection: 'row', alignItems: 'center' }]}>
+              <Text style={[styles.choiceTitle, { flex: 1 }]}>
+                {form.promo.code} · {form.promo.label}
+              </Text>
+              <Text style={{ color: colors.primary }} onPress={form.removePromo}>
+                Retirer
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <TextField
+                  label="Code promo ou de parrainage"
+                  value={form.promoCode}
+                  onChangeText={(value) => form.setPromoCode(value.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  error={form.promoError ?? undefined}
+                  onSubmitEditing={form.applyPromo}
+                />
+              </View>
+              <Button
+                title="Appliquer"
+                variant="outline"
+                loading={form.promoLoading}
+                disabled={!form.promoCode.trim()}
+                onPress={form.applyPromo}
+                style={{ marginTop: 24 }}
+              />
+            </View>
+          )}
+        </Card>
+
         <TextField label="Note pour le vendeur (facultatif)" value={notes} onChangeText={setNotes} multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
 
         <Card style={{ gap: 4 }}>
@@ -156,7 +192,8 @@ export default function Checkout() {
             label={delivery === 'province' ? `Livraison en province${zone ? ` (${zone.name})` : ''}` : DELIVERY_LABELS[delivery].label}
             value={summary.shipping ? formatPrice(summary.shipping) : 'Offerte'}
           />
-          <Row label="Total à payer" value={formatPrice(summary.total)} strong />
+          {form.discount > 0 ? <Row label={`Remise (${form.promo?.code})`} value={`-${formatPrice(form.discount)}`} /> : null}
+          <Row label="Total à payer" value={formatPrice(form.total)} strong />
           {summary.groups.length > 1 ? (
             <Body muted style={{ fontSize: 13 }}>Une commande par vendeur ({summary.groups.length}), un seul paiement.</Body>
           ) : null}

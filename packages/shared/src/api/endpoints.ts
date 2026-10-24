@@ -14,6 +14,11 @@ import type {
   Product,
   ProductPage,
   ProductReviews,
+  PhoneCodeResponse,
+  PhoneLoginStatus,
+  PhoneVerifyResponse,
+  PromoPreview,
+  ReferralInfo,
   Session,
   ShippingOptions,
 } from '../types';
@@ -47,9 +52,19 @@ export const authApi = {
   logout: (api: ApiClient, session: Session) =>
     api.request<void>('/auth/logout', { method: 'POST', body: { refreshToken: session.refreshToken }, auth: false }),
 
-  /** Suppression définitive du compte (exigée par Apple et Google) */
-  deleteAccount: (api: ApiClient, password: string) =>
-    api.request<void>('/auth/me', { method: 'DELETE', body: { password } }),
+  /** Suppression définitive du compte (exigée par Apple et Google) : mot de passe, ou code SMS (compte par téléphone) */
+  deleteAccount: (api: ApiClient, proof: { password: string } | { code: string }) =>
+    api.request<void>('/auth/me', { method: 'DELETE', body: proof }),
+
+  // Connexion par téléphone : un code à 6 chiffres reçu par SMS remplace le mot de passe
+  phoneStatus: (api: ApiClient) => api.request<PhoneLoginStatus>('/auth/phone', { auth: false }),
+
+  requestPhoneCode: (api: ApiClient, phone: string) =>
+    api.request<PhoneCodeResponse>('/auth/phone/request-code', { method: 'POST', body: { phone }, auth: false }),
+
+  /** Numéro inconnu sans prénom ni nom : `needsProfile`, le même code resservira avec eux */
+  verifyPhone: (api: ApiClient, data: { phone: string; code: string; firstName?: string; lastName?: string }) =>
+    api.request<PhoneVerifyResponse>('/auth/phone/verify', { method: 'POST', body: { ...data, client: 'mobile' }, auth: false }),
 };
 
 // ---------- Catalogue ----------
@@ -88,6 +103,23 @@ export const ordersApi = {
 
   mine: async (api: ApiClient) => (await api.request<{ orders: Order[] }>('/checkout/orders/mine')).orders,
 
+  // Paiement garanti : le vendeur n'est payé qu'une fois la réception confirmée
+  confirmReceipt: (api: ApiClient, orderId: string) =>
+    api.request<{ success: boolean; message: string }>(`/orders/${enc(orderId)}/confirm-receipt`, { method: 'POST' }),
+
+  openDispute: (api: ApiClient, orderId: string, reason: string) =>
+    api.request<{ success: boolean; message: string }>(`/orders/${enc(orderId)}/dispute`, { method: 'POST', body: { reason } }),
+
+};
+
+// ---------- Codes promo et parrainage ----------
+
+export const promoApi = {
+  /** Remise indicative ; la commande la recalcule avec les prix du serveur */
+  preview: (api: ApiClient, code: string, itemsSubtotal: number) =>
+    api.request<PromoPreview>('/promo/preview', { method: 'POST', body: { code, itemsSubtotal } }),
+
+  referral: (api: ApiClient) => api.request<ReferralInfo>('/promo/referral'),
 };
 
 // ---------- Livraison ----------

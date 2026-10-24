@@ -109,7 +109,12 @@ export type CompanyStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface User {
   id: string;
-  email: string;
+  /** Compte créé par SMS : pas d'e-mail */
+  email: string | null;
+  /** Téléphone du compte (vérifié par SMS pour un compte créé par téléphone) */
+  phone?: string | null;
+  /** Numéro vérifié par SMS (GET /auth/me) : connexion et suppression du compte par code possibles */
+  verifiedPhone?: string | null;
   firstName: string;
   lastName: string;
   role: UserRole;
@@ -194,7 +199,24 @@ export interface OrderItemSummary {
   availableFrom?: string | null;
 }
 
-export interface Order {
+// Paiement garanti : la plateforme garde l'argent jusqu'à la réception (backend/src/lib/buyerProtection.ts)
+export type ProtectionState = 'none' | 'protected' | 'disputed' | 'received' | 'refunded';
+
+export interface OrderProtection {
+  protection: ProtectionState;
+  deliveredAt: string | null;
+  receivedAt: string | null;
+  /** Fin du délai pour signaler un problème */
+  disputeDeadline: string | null;
+  disputeReason: string | null;
+  disputeResolution: 'refund' | 'release' | null;
+  /** Réponse de l'équipe */
+  disputeNote: string | null;
+  canConfirmReceipt: boolean;
+  canOpenDispute: boolean;
+}
+
+export interface Order extends Partial<OrderProtection> {
   id: string;
   orderNumber: string;
   status: OrderStatus;
@@ -222,6 +244,8 @@ export interface CheckoutInput {
   deliveryMethod: DeliveryMethod;
   /** Mode « relais » : point relais choisi */
   pickupPointId?: string;
+  /** Code promo ou de parrainage (remise recalculée par le serveur) */
+  promoCode?: string;
   paymentMethod: PaymentMethodId;
   notes?: string;
   /** Commande sans compte */
@@ -243,6 +267,8 @@ export interface CheckoutResponse {
     expiresAt: string | null;
   };
   orders?: { id: string; orderNumber: string; status: string; total: number; sellerName: string | null }[];
+  /** Remise du code promo appliqué */
+  discount?: { code: string; amount: number } | null;
 }
 
 // ---------- Paiement (Mobile Money, carte bancaire, PayPal) ----------
@@ -306,4 +332,42 @@ export interface PaymentSummary {
   paidAt: string | null;
   rejectionReason: string | null;
   orders: { orderNumber: string; sellerName: string | null; total: number; status: string; paymentStatus: PaymentStatus }[];
+}
+
+// ---------- Connexion par téléphone (code SMS) ----------
+
+export interface PhoneLoginStatus {
+  enabled: boolean;
+  /** Démonstration : aucun SMS envoyé, le code est renvoyé par requestCode */
+  demo: boolean;
+}
+
+export interface PhoneCodeResponse {
+  success: boolean;
+  expiresInSeconds: number;
+  demoCode?: string;
+}
+
+/** Réponse de la vérification : session ouverte, ou numéro inconnu (prénom et nom à demander, même code) */
+export type PhoneVerifyResponse = LoginResponse | { success: true; needsProfile: true };
+
+// ---------- Codes promo et parrainage ----------
+
+export interface PromoPreview {
+  code: string;
+  /** Remise indicative sur le montant d'articles envoyé */
+  discount: number;
+  label: string;
+  description: string | null;
+}
+
+export interface ReferralInfo {
+  enabled: boolean;
+  code: string;
+  link: string;
+  discountPercent: number;
+  discountMax: number;
+  rewardAmount: number;
+  referrals: number;
+  rewards: { code: string; amount: number; endsAt: string | null; status: 'available' | 'used' | 'expired' }[];
 }

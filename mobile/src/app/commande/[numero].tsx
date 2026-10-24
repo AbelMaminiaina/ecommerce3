@@ -14,6 +14,8 @@ import { Body, Button, Card, ErrorText, Loading, Message, Row, TextField, Title,
 import { useAuth } from '../../features/auth/store';
 import { useGuestOrders } from '../../features/payment/guestOrders';
 import { usePayment } from '../../features/payment/usePayment';
+import { useMyOrders } from '../../features/orders/queries';
+import { ProtectionCard } from '../../features/orders/ProtectionCard';
 import { colors } from '../../theme';
 
 // « d’Orange Money », « de Stripe », « de PayPal »
@@ -25,6 +27,8 @@ export default function OrderPayment() {
   const guestEmail = useGuestOrders((s) => s.emails[numero]);
   const email = signedIn ? undefined : guestEmail;
   const payment = usePayment(numero, email);
+  // Client connecté : commandes de ce panier, pour le paiement garanti (confirmer la réception, signaler un problème)
+  const myOrders = useMyOrders();
 
   const [phone, setPhone] = useState('');
   const [reference, setReference] = useState('');
@@ -76,7 +80,16 @@ export default function OrderPayment() {
     <ScrollView
       contentContainerStyle={ui.screen}
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={false} onRefresh={() => payment.refresh()} tintColor={colors.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={false}
+          onRefresh={() => {
+            payment.refresh();
+            if (signedIn) myOrders.refetch();
+          }}
+          tintColor={colors.primary}
+        />
+      }
     >
       <Stack.Screen options={{ title: 'Paiement', headerBackVisible: false, headerLeft: () => null }} />
 
@@ -94,6 +107,10 @@ export default function OrderPayment() {
         {s.cancelReason ? <Body style={{ color: colors.danger }}>{s.cancelReason}</Body> : null}
         {canPay && s.expiresAt ? <Body muted style={{ fontSize: 13 }}>À payer avant le {formatDate(s.expiresAt)}.</Body> : null}
       </Card>
+
+      {myOrders.data
+        ?.filter((o) => s.orders.some((g) => g.orderNumber === o.orderNumber) && o.protection && o.protection !== 'none')
+        .map((o) => <ProtectionCard key={o.id} order={o} />)}
 
       <Card style={{ gap: 2 }}>
         {s.orders.map((o) => (

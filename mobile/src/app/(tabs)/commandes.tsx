@@ -48,6 +48,10 @@ function OrderCard({ order }: { order: Order }) {
               Point relais {order.pickupPoint.name}, {order.pickupPoint.address}, {order.pickupPoint.city}
             </Text>
           ) : null}
+          {order.canConfirmReceipt && order.status === 'delivered' ? (
+            <Text style={[styles.meta, { color: colors.primary }]}>Réception à confirmer</Text>
+          ) : null}
+          {order.protection === 'disputed' ? <Text style={[styles.meta, { color: colors.danger }]}>Problème signalé</Text> : null}
           {order.trackingNumber ? (
             <Text style={[styles.meta, { color: colors.text }]}>
               Suivi : {order.carrier ? `${order.carrier} ` : ''}

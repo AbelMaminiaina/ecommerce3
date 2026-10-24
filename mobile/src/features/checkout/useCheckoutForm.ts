@@ -4,11 +4,13 @@ import {
   findShippingZone,
   guestSchema,
   isServedCity,
+  promoApi,
   shippingAddressSchema,
   shippingApi,
   summarizeCart,
   type DeliveryMethod,
   type PaymentMethodId,
+  type PromoPreview,
 } from '@tsena/shared';
 import { api } from '../../lib/api';
 import { queryKeys } from '../queryKeys';
@@ -53,6 +55,11 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
   const [address, setAddress] = useState({ street: '', city: '', postalCode: '' });
   const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
   const [notes, setNotes] = useState('');
+  // Code promo ou de parrainage : remise indicative, recalculée par le serveur à la commande
+  const [promoCode, setPromoCode] = useState('');
+  const [promo, setPromo] = useState<PromoPreview | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
 
   // La ville décide du mode à domicile : standard / express à Antananarivo et environs, province ailleurs
@@ -71,6 +78,27 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
   // Premier moyen proposé tant que le client n'a pas choisi
   const selectedMethod = method ?? methods.data?.[0]?.id ?? null;
   const summary = summarizeCart(items, delivery, tiered, { provincePrice: zone?.price, relayFee: pickupPoint?.fee });
+  const discount = promo ? Math.min(promo.discount, summary.subtotal) : 0;
+  const total = summary.total - discount;
+
+  const applyPromo = async () => {
+    const code = promoCode.trim();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      setPromo(await promoApi.preview(api, code, summary.subtotal));
+    } catch (e) {
+      setPromo(null);
+      setPromoError(e instanceof Error ? e.message : 'Ce code promo est invalide');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+  const removePromo = () => {
+    setPromo(null);
+    setPromoCode('');
+  };
 
   const submit = () => {
     const next: Errors = {};
@@ -90,6 +118,7 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
         deliveryMethod: delivery,
         ...(mode === 'relais' && pickupPoint ? { pickupPointId: pickupPoint.id } : {}),
         paymentMethod: selectedMethod,
+        ...(promo ? { promoCode: promo.code } : {}),
         shippingAddress: addr?.success ? { ...addr.data, country: 'Madagascar' } : undefined,
         guest: who?.success ? who.data : undefined,
         notes: notes.trim() || undefined,
@@ -112,6 +141,15 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
     /** Panier vide (et pas de commande en cours d'envoi) : rien à commander */
     empty: items.length === 0 && !order.isSuccess,
     summary,
+    discount,
+    total,
+    promo,
+    promoCode,
+    setPromoCode,
+    promoError,
+    promoLoading,
+    applyPromo,
+    removePromo,
     delivery,
     mode,
     setMode,

@@ -4,6 +4,11 @@ import type { ProductQuery } from '@tsena/shared';
 // La première valeur de chaque clé désigne le domaine (sert aux invalidations et à la persistance hors connexion).
 export const queryKeys = {
   categories: () => ['categories'] as const,
+  auth: {
+    /** Connexion par SMS proposée ? */
+    phone: () => ['auth', 'phone'] as const,
+  },
+  referral: () => ['referral'] as const,
   products: {
     all: () => ['products'] as const,
     /** Une page simple (accueil) : clé distincte du défilement infini, dont les données n'ont pas la même forme */
