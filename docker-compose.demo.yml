@@ -130,6 +130,11 @@ services:
       CASH_ON_DELIVERY: ${CASH_ON_DELIVERY:-false}
       CASH_ON_DELIVERY_CITIES: ${CASH_ON_DELIVERY_CITIES:-Antananarivo}
       CASH_ON_DELIVERY_MAX_AMOUNT: ${CASH_ON_DELIVERY_MAX_AMOUNT:-500000}
+      # Parrainage : remise du filleul (%, plafond en Ar) et bon offert au parrain (Ar, validité en jours)
+      REFERRAL_DISCOUNT_PERCENT: ${REFERRAL_DISCOUNT_PERCENT:-10}
+      REFERRAL_DISCOUNT_MAX: ${REFERRAL_DISCOUNT_MAX:-20000}
+      REFERRAL_REWARD_AMOUNT: ${REFERRAL_REWARD_AMOUNT:-5000}
+      REFERRAL_REWARD_DAYS: ${REFERRAL_REWARD_DAYS:-90}
     volumes:
       # Photos des produits téléversées (à sauvegarder avec la base)
       - uploads_data:/app/uploads

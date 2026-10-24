@@ -11,6 +11,9 @@ import { PageHeader } from '@/components/shop/PageHeader';
 import { createOrder } from '@/lib/api/checkout';
 import { getPaymentMethods, paymentMethodIcon, type PaymentMethodId, type PaymentMethodInfo } from '@/lib/api/payments';
 import { isServedCity } from '@/lib/cashOnDelivery';
+import { PromoCodeField } from '@/components/shop/PromoCodeField';
+import { forgetReferral } from '@/lib/referral';
+import type { PromoPreview } from '@/lib/api/promo';
 import { filterCheckoutSteps, type CheckoutStepId } from './checkout-steps';
 
 type DeliveryMethod = 'standard' | 'express' | 'retrait';
@@ -50,6 +53,7 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
   const [notes, setNotes] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [promo, setPromo] = useState<PromoPreview | null>(null);
 
   // Paiement Mobile Money obligatoire pour tous (visiteurs, particuliers, entreprises)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodInfo[] | null>(null);
@@ -90,7 +94,9 @@ export default function CheckoutPage() {
     );
   const hasFreeShippingItem = sellerGroups.every((group) => group.items.some((item) => item.freeShipping));
   const shippingCost = shippingFor(deliveryMethod);
-  const total = subtotal + shippingCost;
+  // Remise d'un code promo : sur les articles uniquement, recalculée par le serveur à la commande
+  const discount = promo ? Math.min(promo.discount, subtotal) : 0;
+  const total = subtotal + shippingCost - discount;
   const belowMoqItems = cart.items.filter((item) => item.quantity < item.moq);
   const isPickup = deliveryMethod === 'retrait';
 
@@ -155,6 +161,7 @@ export default function CheckoutPage() {
           deliveryMethod,
           paymentMethod,
           notes: notes || undefined,
+          ...(promo ? { promoCode: promo.code } : {}),
           ...(isGuest
             ? {
                 guest: {
@@ -171,6 +178,8 @@ export default function CheckoutPage() {
 
       if (response.success && response.orderNumber) {
         cart.clearCart();
+        // Code de parrainage utilisé : inutile de le reproposer
+        if (promo) forgetReferral();
         const numbers = response.orders?.map((o) => o.orderNumber) ?? [response.orderNumber];
         router.push(
           `/checkout/confirmation?order=${numbers.join(',')}${
@@ -646,6 +655,14 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
+                <div className="summary-promo">
+                  <PromoCodeField
+                    itemsSubtotal={subtotal}
+                    token={accessToken}
+                    applied={promo}
+                    onChange={setPromo}
+                  />
+                </div>
                 <div className="cost-breakdown">
                   <div className="cost-line">
                     <span>Sous-total</span>
@@ -655,6 +672,12 @@ export default function CheckoutPage() {
                     <span>{isPickup ? 'Retrait sur place' : `Livraison${deliveryMethod === 'express' ? ' express' : ''}`}</span>
                     {shippingCost === 0 ? <span className="free">Gratuit</span> : <span>{formatPrice(shippingCost)}</span>}
                   </div>
+                  {discount > 0 && (
+                    <div className="cost-line discount">
+                      <span>Remise ({promo!.code})</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  )}
                   <div className="cost-total">
                     <span>Total</span>
                     <span>{formatPrice(total)}</span>

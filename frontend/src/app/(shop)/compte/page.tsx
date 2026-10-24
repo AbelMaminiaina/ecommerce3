@@ -18,9 +18,10 @@ import { formatPrice, getProductImage } from '@/lib/utils';
 import { CONTACT, CONTACT_MAILTO } from '@/lib/contact';
 import { PhoneLinkCard, formatMalagasyPhone } from '@/components/shopwise/PhoneLogin';
 import { OrderProtectionBox } from '@/components/shop/OrderProtectionBox';
+import { ReferralPanel } from '@/components/shop/ReferralPanel';
 
-type Panel = 'dashboard' | 'orders' | 'wishlist' | 'profile';
-const PANELS: Panel[] = ['dashboard', 'orders', 'wishlist', 'profile'];
+type Panel = 'dashboard' | 'orders' | 'wishlist' | 'referral' | 'profile';
+const PANELS: Panel[] = ['dashboard', 'orders', 'wishlist', 'referral', 'profile'];
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente de paiement',
@@ -304,6 +305,7 @@ export default function AccountPage() {
                   {navButton('dashboard', 'bi-grid', 'Tableau de bord')}
                   {navButton('orders', 'bi-receipt', 'Mes commandes', orderCount)}
                   {navButton('wishlist', 'bi-heart', 'Mes favoris', wishlist.count)}
+                  {navButton('referral', 'bi-gift', 'Parrainage')}
                   {navButton('profile', 'bi-person-gear', 'Profil')}
                   <button type="button" className="account-nav-link logout" onClick={() => signOut({ callbackUrl: '/' })}>
                     <i className="bi bi-box-arrow-right"></i><span>Se déconnecter</span>
@@ -388,6 +390,16 @@ export default function AccountPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Parrainage : chargé seulement quand l'onglet est ouvert */}
+              <div className={`account-panel${panel === 'referral' ? ' active' : ''}`} role="tabpanel">
+                <div className="panel-card">
+                  <div className="panel-card-head">
+                    <h4>Parrainage</h4>
+                  </div>
+                  {panel === 'referral' && token && <ReferralPanel token={token} />}
                 </div>
               </div>
 

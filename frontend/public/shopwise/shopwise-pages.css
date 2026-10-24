@@ -1484,3 +1484,39 @@
 .account .protection-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
 .account .protection-form { margin-top: 12px; }
 .account .protection-form textarea { font-size: 14px; }
+
+/* Récapitulatif de commande : code promo */
+.sw-order-summary .summary-promo { padding: 12px 0; border-bottom: 1px solid var(--sw-border); }
+.sw-order-summary .promo-toggle { border: 0; background: none; padding: 0; font-size: 14px; color: var(--sw-accent); font-weight: 500; }
+.sw-order-summary .promo-input { display: flex; gap: 8px; }
+.sw-order-summary .promo-input .form-control { height: 40px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+.sw-order-summary .promo-input .btn-submit { height: 40px; padding: 0 16px; font-size: 14px; flex-shrink: 0; }
+.sw-order-summary .promo-error { display: block; margin-top: 6px; color: #dc2626; }
+.sw-order-summary .promo-hint { display: block; margin-top: 6px; color: var(--sw-muted); }
+.sw-order-summary .promo-applied { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #166534; background: color-mix(in srgb, #16a34a, transparent 90%); border-radius: 6px; padding: 8px 10px; }
+.sw-order-summary .promo-applied span { flex: 1; }
+.sw-order-summary .promo-applied .link-btn { border: 0; background: none; padding: 0; font-size: 13px; color: var(--sw-text); text-decoration: underline; }
+.sw-order-summary .cost-line.discount { color: #16a34a; font-weight: 600; }
+
+/* Mon compte : parrainage */
+.account .referral-hero { padding: 20px; border-radius: 8px; background: var(--sw-accent-soft); border: 1px solid var(--sw-accent-line); }
+.account .referral-hero h4 { font-size: 18px; margin-bottom: 6px; }
+.account .referral-hero p { font-size: 14px; margin-bottom: 14px; }
+.account .referral-code { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; background: var(--sw-surface); border: 1px dashed var(--sw-accent); }
+.account .referral-code span { font-size: 13px; color: var(--sw-muted); }
+.account .referral-code strong { font-size: 20px; letter-spacing: .08em; color: var(--sw-accent); flex: 1; }
+.account .referral-share { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.account .btn-social {
+  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 6px;
+  border: 1px solid var(--sw-border-strong); background: var(--sw-surface); color: var(--sw-text); font-size: 14px; font-weight: 500;
+}
+.account .btn-social:hover { border-color: var(--sw-accent); color: var(--sw-accent); }
+.account .btn-social .bi-whatsapp { color: #25d366; }
+.account .btn-social .bi-facebook { color: #1877f2; }
+.account .referral-rewards { list-style: none; padding: 0; margin: 12px 0 0; }
+.account .referral-rewards li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--sw-border); font-size: 14px; }
+.account .referral-rewards li > div { flex: 1; display: flex; flex-direction: column; }
+.account .referral-rewards li span { color: var(--sw-muted); font-size: 13px; }
+.account .referral-rewards .reward-status { font-weight: 600; color: #16a34a; }
+.account .referral-rewards li.st-used .reward-status,
+.account .referral-rewards li.st-expired .reward-status { color: var(--sw-muted); }

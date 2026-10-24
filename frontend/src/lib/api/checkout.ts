@@ -14,6 +14,8 @@ interface CheckoutData {
   // Mobile Money, carte, PayPal, ou paiement à la livraison (clients connectés, sous conditions)
   paymentMethod: PaymentMethodId;
   notes?: string;
+  /** Code promo ou de parrainage (remise recalculée par le serveur) */
+  promoCode?: string;
   // Commande sans compte : coordonnées du visiteur (`website` est un champ piège anti-robot)
   guest?: { name: string; email: string; phone: string };
   website?: string;

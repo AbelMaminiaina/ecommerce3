@@ -21,6 +21,13 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - Paiement par Mobile Money (MVola) : instructions de paiement envoyées par e-mail après commande
 - Gestion du statut de commande (en attente / en préparation) selon la disponibilité du stock au moment de l'achat
 
+## Codes promo et parrainage
+
+- Codes promo créés par l'administrateur (page « Codes promo ») : pourcentage plafonné ou montant fixe, achat minimum, dates de validité, nombre d'utilisations, réservé à une première commande. Une utilisation par client ; le code redevient disponible si le panier est entièrement annulé
+- Champ « Code promo » au moment de payer, avec la remise calculée en direct ; la commande la recalcule avec les prix du serveur et la répartit entre les vendeurs d'un panier
+- Remises sur les articles uniquement (jamais la livraison), prises en charge par la plateforme : la part du vendeur ne change pas
+- Parrainage : chaque client a un code personnel et un lien (?ref=…) à partager (WhatsApp, Facebook, copie) depuis « Mon compte ». Le filleul obtient une remise sur sa première commande (10 %, max 20 000 Ar par défaut) ; quand elle est payée, le parrain reçoit un bon d'achat (5 000 Ar, 90 jours) par SMS et e-mail. Réglages `REFERRAL_*`
+
 ## SMS
 
 - Prestataire au choix (`SMS_PROVIDER`) : API SMS Madagascar d'Orange Developer, Twilio, ou mode démonstration (code affiché à l'écran, aucun SMS envoyé)

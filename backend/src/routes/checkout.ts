@@ -27,6 +27,8 @@ import { orderExpiresAt } from '../lib/orderExpiry.js';
 import { cashOnDeliveryError } from '../lib/cashOnDelivery.js';
 import { buyerProtectionDays, hasOpenDispute, protectionView } from '../lib/buyerProtection.js';
 import { markOrdersPaid } from '../services/paymentSettlement.js';
+import { PromoError, allocateDiscount } from '../lib/promo.js';
+import { claimPromo, releasePromoIfCancelled, resolvePromo } from '../services/promo.js';
 
 const router = Router();
 
@@ -59,6 +61,8 @@ const checkoutSchema = z.object({
     .optional(),
   // Champ piège pour les robots : un humain ne le voit pas et le laisse vide
   website: z.string().optional(),
+  // Code promo ou code de parrainage (remise sur les articles, prise en charge par la plateforme)
+  promoCode: z.string().trim().max(40).optional(),
 });
 
 // Commandes sans compte : limitées par IP pour freiner les abus (les visiteurs connectés ne le sont pas)
@@ -178,6 +182,8 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
       return { productId: item.productId, quantity: item.quantity, price, product };
     });
 
+    const itemsSubtotal = pricedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
     // Paiement à la livraison : client connecté, ville desservie (ou retrait), montant plafonné
     const cashOnDelivery = paymentMethod.id === 'cash_on_delivery';
     if (cashOnDelivery) {
@@ -185,9 +191,25 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         isGuest,
         deliveryMethod: validatedData.deliveryMethod,
         city: validatedData.shippingAddress?.city,
-        itemsTotal: pricedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        itemsTotal: itemsSubtotal,
       });
       if (codError) return res.status(400).json({ success: false, error: codError });
+    }
+
+    // Code promo : vérifié sur les prix calculés ici (jamais ceux du navigateur)
+    let promo: Awaited<ReturnType<typeof resolvePromo>>['promo'] | null = null;
+    let discount = 0;
+    if (validatedData.promoCode) {
+      try {
+        ({ promo, discount } = await resolvePromo(
+          validatedData.promoCode,
+          { userId: req.user?.userId ?? null, companyId: company?.id ?? null },
+          itemsSubtotal
+        ));
+      } catch (error) {
+        if (error instanceof PromoError) return res.status(400).json({ success: false, error: error.message });
+        throw error;
+      }
     }
 
     // Adresse (liée à l'entreprise ou au particulier) si fournie : une seule pour tout le panier
@@ -213,6 +235,23 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
     }
 
     const checkoutGroup = randomUUID();
+
+    // Remise répartie entre les commandes du panier, au prorata des articles ; utilisation du code réservée
+    // juste avant la création des commandes (limite d'utilisations respectée même en cas de commandes simultanées)
+    const groupDiscounts = allocateDiscount(
+      discount,
+      [...groups.values()].map((items) => items.reduce((sum, item) => sum + item.price * item.quantity, 0))
+    );
+    if (promo) {
+      try {
+        await claimPromo(promo, { userId: req.user?.userId ?? null, checkoutGroup, discount });
+      } catch (error) {
+        if (error instanceof PromoError) return res.status(400).json({ success: false, error: error.message });
+        throw error;
+      }
+    }
+    let groupIndex = 0;
+
     const createdOrders: {
       id: string;
       orderNumber: string;
@@ -224,6 +263,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
 
     for (const [sellerId, groupItems] of groups) {
       const subtotal = groupItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const discountAmount = groupDiscounts[groupIndex++];
       const freeShippingProductIds = new Set(
         groupItems.filter((item) => item.product.freeShipping).map((item) => item.productId)
       );
@@ -233,7 +273,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         freeShippingProductIds,
         groupItems,
       );
-      const total = subtotal + shippingCost;
+      const total = subtotal + shippingCost - discountAmount;
 
       let allInStock = true;
       const stockUpdates: { id: string; newQuantity: number }[] = [];
@@ -268,6 +308,8 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
           status: orderStatus,
           subtotal,
           shippingCost,
+          discountAmount,
+          promoCode: promo?.code ?? null,
           total,
           paymentMethod: paymentMethod.id,
           paymentStatus: 'awaiting',
@@ -328,6 +370,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         })),
         subtotal,
         shippingCost,
+        discountAmount,
         total,
         status: orderStatus,
         createdAt: new Date(),
@@ -396,6 +439,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
       status: first.status,
       total: totalAmount,
       payment,
+      discount: promo ? { code: promo.code, amount: discount } : null,
       orders: createdOrders,
     });
   } catch (error) {
@@ -756,6 +800,11 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
       order.user?.phone ??
       order.customer?.phone ??
       order.guestPhone;
+
+    // Panier entièrement annulé : le code promo utilisé redevient disponible
+    if (status === 'cancelled') {
+      await releasePromoIfCancelled(order.checkoutGroup).catch((err) => console.error('Failed to release promo code:', err));
+    }
 
     if (status === 'shipped' || status === 'delivered' || status === 'cancelled') {
       sendOrderStatusSms({ phone: contactPhone, orderNumber: order.orderNumber, status, pickup: order.deliveryMethod === 'retrait' });

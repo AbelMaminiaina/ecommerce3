@@ -169,6 +169,12 @@ model User {
   verifiedPhone String?  @unique
   role          UserRole
 
+  // Parrainage : client qui a recommandé Tsena (renseigné à la première commande faite avec son code)
+  referredById String?
+  referredBy   User?       @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]      @relation("Referrals")
+  promoCodes   PromoCode[] @relation("PromoOwner")
+
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
@@ -199,6 +205,65 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+enum PromoKind {
+  standard // Code créé par l'administrateur (campagne, fête, ouverture…)
+  referral // Code de parrainage personnel d'un client
+  reward // Bon d'achat offert au parrain quand son filleul commande
+}
+
+enum PromoType {
+  percent // value = pourcentage (1 à 90), plafonné par maxDiscount
+  fixed // value = montant en Ariary
+}
+
+// Code promo appliqué au panier. La remise porte sur les articles (pas la livraison) et est prise en charge par
+// la plateforme : le vendeur reçoit le même montant que sans remise (voir lib/commission.ts).
+model PromoCode {
+  id             String    @id @default(uuid())
+  code           String    @unique // Toujours en majuscules
+  kind           PromoKind @default(standard)
+  type           PromoType
+  value          Int
+  maxDiscount    Int? // Plafond de remise (Ariary) pour un pourcentage
+  minSubtotal    Int       @default(0) // Montant minimal d'articles
+  startsAt       DateTime?
+  endsAt         DateTime?
+  maxUses        Int? // Nombre total d'utilisations (null = illimité)
+  usedCount      Int       @default(0)
+  perUserLimit   Int       @default(1) // Utilisations par client
+  firstOrderOnly Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  description    String?
+
+  // Parrainage : propriétaire du code (kind = referral), ou bénéficiaire unique d'un bon (kind = reward)
+  ownerUserId String?
+  owner       User?   @relation("PromoOwner", fields: [ownerUserId], references: [id])
+
+  redemptions PromoRedemption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerUserId])
+  @@map("promo_codes")
+}
+
+// Utilisation d'un code pour un panier (une ligne par panier, même s'il est scindé en plusieurs commandes)
+model PromoRedemption {
+  id             String    @id @default(uuid())
+  promoCodeId    String
+  promoCode      PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId         String?
+  checkoutGroup  String    @unique
+  discountAmount Int
+  // Parrainage : bon offert au parrain une fois la commande payée (une seule fois)
+  rewardIssuedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([promoCodeId, userId])
+  @@map("promo_redemptions")
 }
 
 // Code de connexion envoyé par SMS : seule son empreinte est stockée, valable quelques minutes
@@ -414,9 +479,12 @@ model Order {
   disputeResolution DisputeResolution?
   disputeNote       String? // Décision de l'administrateur, communiquée à l'acheteur
 
-  subtotal     Int // Prix en Ariary
-  shippingCost Int // Prix en Ariary
-  total        Int // Prix en Ariary
+  subtotal       Int // Prix en Ariary
+  shippingCost   Int // Prix en Ariary
+  // Remise d'un code promo (part de ce vendeur), prise en charge par la plateforme : total = subtotal + shippingCost - discountAmount
+  discountAmount Int     @default(0)
+  promoCode      String?
+  total          Int // Prix en Ariary
 
   // Commission de la plateforme, figée à la confirmation du paiement (commandes de vendeurs uniquement) :
   // commissionAmount = subtotal x taux ; sellerAmount = total - commissionAmount (le vendeur livre, il

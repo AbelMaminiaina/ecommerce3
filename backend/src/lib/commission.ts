@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 // Commission de la plateforme sur les ventes des vendeurs.
 //  - Base : le sous-total des produits (pas la livraison).
 //  - Le vendeur livre lui-même : il reçoit `total - commission`, donc aussi les frais de livraison.
+//  - Une remise de code promo est prise en charge par la plateforme : elle est rajoutée à la part du vendeur.
 //  - Les commandes sans vendeur (produits de la plateforme) ne génèrent aucune commission.
 //  - Le taux est figé sur la commande au moment de la confirmation du paiement.
 
@@ -27,12 +28,12 @@ export function effectiveCommissionRate(seller?: { commissionRate: number | null
 }
 
 // Répartition d'une commande de vendeur entre plateforme et vendeur (montants entiers en Ariary)
-export function splitOrderAmounts(order: { subtotal: number; total: number }, ratePercent: number) {
+export function splitOrderAmounts(order: { subtotal: number; total: number; discountAmount?: number }, ratePercent: number) {
   const commissionAmount = Math.round((order.subtotal * ratePercent) / 100);
   return {
     commissionRate: ratePercent,
     commissionAmount,
-    sellerAmount: order.total - commissionAmount,
+    sellerAmount: order.total + (order.discountAmount ?? 0) - commissionAmount,
   };
 }
 

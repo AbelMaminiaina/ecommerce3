@@ -25,6 +25,8 @@ interface OrderData {
   items: OrderItem[];
   subtotal: number;
   shippingCost: number;
+  /** Remise d'un code promo (déjà déduite du total) */
+  discountAmount?: number;
   total: number;
   status: string;
   // Instructions de paiement (le paiement est obligatoire pour toute commande)
@@ -322,6 +324,11 @@ function generateCustomerEmailHTML(order: OrderData): string {
             <td style="padding: 8px 0;">Frais de livraison</td>
             <td style="text-align: right;">${order.shippingCost > 0 ? formatPrice(order.shippingCost) : '<span style="color: #16a34a;">Gratuit</span>'}</td>
           </tr>
+          ${order.discountAmount ? `
+          <tr style="color: #16a34a;">
+            <td style="padding: 8px 0;">Remise (code promo)</td>
+            <td style="text-align: right;">-${formatPrice(order.discountAmount)}</td>
+          </tr>` : ''}
           <tr style="font-size: 20px; font-weight: bold; color: #1e3a5f;">
             <td style="padding: 15px 0 0 0; border-top: 2px solid #e5e5e5;">TOTAL FACTURÉ</td>
             <td style="text-align: right; padding: 15px 0 0 0; border-top: 2px solid #e5e5e5;">${formatPrice(order.total)}</td>
@@ -1290,6 +1297,47 @@ export async function sendDisputeResolvedEmail(data: DisputeResolvedEmailData): 
     return true;
   } catch (error) {
     console.error('Error sending dispute resolution email:', error);
+    return false;
+  }
+}
+
+interface ReferralRewardEmailData {
+  firstName: string;
+  contactEmail: string;
+  code: string;
+  amount: number;
+  endsAt: Date;
+  shopUrl: string;
+}
+
+// Parrainage : le filleul a payé sa première commande, le parrain reçoit un bon d'achat
+export async function sendReferralRewardEmail(data: ReferralRewardEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping referral reward email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep({ ...data, endsAt: formatDateOnly(data.endsAt) });
+    const html = paymentEmailShell(
+      `${formatPrice(data.amount)} offerts !`,
+      'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)',
+      '🎁',
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.firstName}, une personne que vous avez parrainée vient de passer sa première commande. Merci de faire connaître ${BRAND_NAME} !</p>
+      <p style="margin: 15px 0; color: #333;">Votre bon d'achat, à saisir dans « Code promo » au moment de payer :</p>
+      <p style="margin: 10px 0; font-size: 26px; font-weight: bold; letter-spacing: 2px; color: #0d9488;">${safe.code}</p>
+      <p style="margin: 5px 0; color: #666; font-size: 13px;">Valable jusqu'au ${safe.endsAt}.</p>
+      ${linkButton(safe.shopUrl, 'En profiter')}`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail,
+      subject: `🎁 ${formatPrice(data.amount)} offerts grâce à votre parrainage`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending referral reward email:', error);
     return false;
   }
 }

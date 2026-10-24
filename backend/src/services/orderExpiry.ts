@@ -4,6 +4,7 @@ import { EXPIRY_CANCEL_REASON, unpaidOrderExpiryHours } from '../lib/orderExpiry
 import { NOT_CASH_ON_DELIVERY } from '../lib/cashOnDelivery.js';
 import { sendOrderCancellationEmail } from './emailService.js';
 import { sendOrderStatusSms } from './smsNotifications.js';
+import { releasePromoIfCancelled } from './promo.js';
 import type { RecurringJob } from './jobs.js';
 
 const UNPAID = ['awaiting', 'rejected'] as const;
@@ -59,6 +60,7 @@ export async function expireUnpaidOrders(now: Date = new Date()): Promise<{ canc
       stockRestored = true;
     }
     cancelled.push(order.orderNumber);
+    await releasePromoIfCancelled(order.checkoutGroup).catch((err) => console.error('Failed to release promo code:', err));
 
     sendOrderStatusSms({
       phone: order.company?.contactPhone ?? order.user?.verifiedPhone ?? order.user?.phone ?? order.guestPhone,

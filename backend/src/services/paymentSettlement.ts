@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 import { effectiveCommissionRate, splitOrderAmounts } from '../lib/commission.js';
 import { sendPaymentConfirmedEmail } from './emailService.js';
 import { sendPaymentConfirmedSms } from './smsNotifications.js';
+import { issueReferralReward } from './promo.js';
 
 export type BuyerOrder = Order & {
   company?: { name: string; contactEmail: string; contactPhone?: string | null } | null;
@@ -57,6 +58,11 @@ export async function markOrdersPaid(params: {
         ...(order.status === 'pending' && order.stockReserved ? { status: 'processing' } : {}),
       },
     });
+  }
+
+  // Parrainage : première commande du filleul payée -> bon d'achat pour le parrain (une seule fois)
+  for (const group of new Set(orders.map((o) => o.checkoutGroup))) {
+    await issueReferralReward(group).catch((err) => console.error('Failed to issue referral reward:', err));
   }
 
   const buyer = buyerOf(buyerOrder);

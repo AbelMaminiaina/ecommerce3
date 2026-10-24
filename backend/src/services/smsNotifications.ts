@@ -115,3 +115,12 @@ export function sendDisputeResolvedSms(params: {
       : `Tsena Pro : votre signalement sur la commande ${params.orderNumber} a ete examine. Details par e-mail ou au service client.`
   );
 }
+
+// Parrainage : bon d'achat offert au parrain
+export function sendReferralRewardSms(params: { phone: string | null | undefined; code: string; amount: number; endsAt: Date }): void {
+  const day = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Indian/Antananarivo', day: '2-digit', month: '2-digit' }).format(params.endsAt);
+  notify(
+    params.phone,
+    `Tsena Pro : votre filleul a commande ! ${smsPrice(params.amount)} offerts avec le code ${params.code}, valable jusqu'au ${day}.`
+  );
+}
