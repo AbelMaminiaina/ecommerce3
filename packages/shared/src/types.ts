@@ -371,3 +371,12 @@ export interface ReferralInfo {
   referrals: number;
   rewards: { code: string; amount: number; endsAt: string | null; status: 'available' | 'used' | 'expired' }[];
 }
+
+// ---------- Conseiller IA (POST /api/advisor) ----------
+
+export interface AdvisorResponse {
+  message: string;
+  /** ai : réponse de Mistral ou Gemini ; fallback : recherche par mots-clés */
+  source: 'ai' | 'fallback';
+  products: Product[];
+}

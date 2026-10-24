@@ -2,6 +2,7 @@
 
 import type { ApiClient } from './client';
 import type {
+  AdvisorResponse,
   Category,
   CheckoutInput,
   CheckoutResponse,
@@ -120,6 +121,14 @@ export const promoApi = {
     api.request<PromoPreview>('/promo/preview', { method: 'POST', body: { code, itemsSubtotal } }),
 
   referral: (api: ApiClient) => api.request<ReferralInfo>('/promo/referral'),
+};
+
+// ---------- Conseiller IA ----------
+
+export const advisorApi = {
+  /** Question libre (3 à 500 caractères) : conseil et produits du catalogue ; 10 questions par heure */
+  ask: (api: ApiClient, question: string) =>
+    api.request<AdvisorResponse>('/advisor', { method: 'POST', body: { question }, auth: false }),
 };
 
 // ---------- Livraison ----------

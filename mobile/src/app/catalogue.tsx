@@ -76,7 +76,18 @@ export default function Catalogue() {
             products.isLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 32 }} />
             ) : (
-              <Body muted style={{ textAlign: 'center', marginTop: 32 }}>Aucun produit ne correspond.</Body>
+              <View style={{ alignItems: 'center', gap: 12, marginTop: 32 }}>
+                <Body muted style={{ textAlign: 'center' }}>Aucun produit ne correspond.</Body>
+                {/* La recherche échoue souvent sur un besoin (« carreler une douche ») : le conseiller sait l'interpréter */}
+                {term.length >= 3 ? (
+                  <Button
+                    variant="outline"
+                    icon="sparkles"
+                    title="Demander au conseiller"
+                    onPress={() => router.push({ pathname: '/conseiller', params: { q: term } })}
+                  />
+                ) : null}
+              </View>
             )
           }
           ListFooterComponent={products.isFetchingNextPage ? <ActivityIndicator color={colors.primary} style={{ margin: 16 }} /> : null}

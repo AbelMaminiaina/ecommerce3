@@ -74,6 +74,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="catalogue" options={{ title: 'Catalogue' }} />
         <Stack.Screen name="panier" options={{ title: 'Mon panier' }} />
+        <Stack.Screen name="conseiller" options={{ title: 'Conseiller Tsena' }} />
         <Stack.Screen name="auth/connexion" options={{ title: 'Connexion', presentation: 'modal' }} />
         <Stack.Screen name="auth/inscription" options={{ title: 'Créer un compte', presentation: 'modal' }} />
       </Stack>

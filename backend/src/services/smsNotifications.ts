@@ -38,8 +38,11 @@ const ascii = (text: string) =>
     .replace(/[^\x20-\x7E]/g, '')
     .trim();
 
-const orderRef = (orderNumbers: string[]) =>
-  orderNumbers.length === 1 ? `Commande ${orderNumbers[0]}` : `Commandes ${orderNumbers[0]} (+${orderNumbers.length - 1})`;
+// « Commande ORD-… » en début de phrase, « commande ORD-… » ensuite (le numéro garde ses majuscules : le client le recopie)
+const orderRef = (orderNumbers: string[], { midSentence = false } = {}) => {
+  const word = `${midSentence ? 'c' : 'C'}ommande${orderNumbers.length > 1 ? 's' : ''}`;
+  return orderNumbers.length === 1 ? `${word} ${orderNumbers[0]}` : `${word} ${orderNumbers[0]} (+${orderNumbers.length - 1})`;
+};
 
 // Envoi en tâche de fond : un SMS refusé ne bloque jamais la commande
 function notify(phone: string | null | undefined, text: string): void {
@@ -83,7 +86,7 @@ export function sendPaymentReminderSms(params: {
 export function sendPaymentConfirmedSms(params: { phone: string | null | undefined; orderNumbers: string[]; totalAmount: number }): void {
   notify(
     params.phone,
-    `Tsena Pro : paiement de ${smsPrice(params.totalAmount)} recu pour ${orderRef(params.orderNumbers).toLowerCase()}. Merci ! Nous preparons votre commande.`
+    `Tsena Pro : paiement de ${smsPrice(params.totalAmount)} recu pour ${orderRef(params.orderNumbers, { midSentence: true })}. Merci ! Nous preparons votre commande.`
   );
 }
 

@@ -75,6 +75,11 @@ describe('SMS de suivi de commande', () => {
     }
   });
 
+  it('garde le numéro de commande tel quel (le client le recopie)', () => {
+    sendPaymentConfirmedSms({ phone: '0341234567', orderNumbers: ['ORD-MVMOOFFF-1XMD7O'], totalAmount: 6_880_000 });
+    expect(lastText()).toBe('Tsena Pro : paiement de 6 880 000 Ar recu pour commande ORD-MVMOOFFF-1XMD7O. Merci ! Nous preparons votre commande.');
+  });
+
   it('n’envoie rien sans mobile malgache, ou si les SMS de commande sont désactivés', () => {
     sendOrderStatusSms({ phone: null, orderNumber: 'ORD-A', status: 'shipped' });
     sendOrderStatusSms({ phone: '+33612345678', orderNumber: 'ORD-A', status: 'shipped' });

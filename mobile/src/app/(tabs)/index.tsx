@@ -18,6 +18,7 @@ import { formatPrice, FREE_SHIPPING_THRESHOLD, type Product } from '@tsena/share
 import { Brand } from '../../components/Brand';
 import { HeaderActions } from '../../features/cart/HeaderActions';
 import { ProductCard } from '../../features/catalog/ProductCard';
+import { AdvisorEntry } from '../../features/advisor/AdvisorEntry';
 import { ProductImage } from '../../components/ProductImage';
 import { Body, Button, Message, errorMessage } from '../../components/ui';
 import { useAuth } from '../../features/auth/store';
@@ -155,6 +156,7 @@ export default function Home() {
           ListHeaderComponent={
             <View style={{ paddingTop: 16 }}>
               <PromoCarousel image={products[0]?.thumbnails?.[0] ?? products[0]?.images[0]} />
+              <AdvisorEntry />
               <SectionHeader title="Nouveautés 🔥" onSeeAll={() => router.push('/catalogue')} />
             </View>
           }
