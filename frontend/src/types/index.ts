@@ -1,5 +1,6 @@
 import type { PaymentMethodId, PaymentStatus } from '@/lib/api/payments';
 import type { OrderProtection } from '@/lib/api/orders';
+import type { PickupPoint } from '@/lib/api/shipping';
 
 // Types pour les produits
 export interface Product {
@@ -131,7 +132,8 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type DeliveryMethod = 'standard' | 'express' | 'retrait';
+// standard / express : à domicile (Antananarivo et environs) ; province : par transporteur ; relais : point relais
+export type DeliveryMethod = 'standard' | 'express' | 'retrait' | 'province' | 'relais';
 
 export interface OrderAddress {
   street: string;
@@ -158,6 +160,12 @@ export interface CompanyOrder extends Partial<OrderProtection> {
   shippingCost: number;
   total: number;
   deliveryMethod: DeliveryMethod;
+  /** Livraison en province : zone appliquée */
+  shippingZone?: string | null;
+  pickupPoint?: PickupPoint | null;
+  /** Suivi du colis, renseigné à l'expédition */
+  carrier?: string | null;
+  trackingNumber?: string | null;
   paymentMethod?: PaymentMethodId | null;
   paymentStatus?: PaymentStatus;
   cancelReason?: string | null;

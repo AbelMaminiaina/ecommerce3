@@ -1520,3 +1520,18 @@
 .account .referral-rewards .reward-status { font-weight: 600; color: #16a34a; }
 .account .referral-rewards li.st-used .reward-status,
 .account .referral-rewards li.st-expired .reward-status { color: var(--sw-muted); }
+
+/* Paiement : choix du point relais */
+.relay-list { display: flex; flex-direction: column; gap: 8px; }
+.relay-option { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--sw-border-strong); background: var(--sw-surface); cursor: pointer; }
+.relay-option.selected { border-color: var(--sw-accent); box-shadow: 0 0 0 3px var(--sw-accent-soft); }
+.relay-option input { accent-color: var(--sw-accent); }
+.relay-option .relay-body { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.relay-option .relay-body strong { color: var(--sw-heading); }
+.relay-option .relay-body small { color: var(--sw-muted); font-size: 12.5px; }
+.relay-option .tab-price { font-weight: 600; color: var(--sw-heading); white-space: nowrap; }
+.relay-option .tab-price.free { color: #16a34a; }
+
+/* Mon compte : suivi du colis et point relais */
+.account .order-shipping { margin-bottom: 8px; font-size: 14px; }
+.account .order-shipping strong { color: var(--sw-heading); }

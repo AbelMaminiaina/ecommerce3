@@ -22,6 +22,8 @@ const DELIVERY_LABELS: Record<string, string> = {
   standard: 'Livraison standard',
   express: 'Livraison express',
   retrait: 'Retrait sur place',
+  province: 'Livraison en province',
+  relais: 'Point relais',
 };
 
 // Suivi de commande. Client connecté : son historique est dans « Mon compte » (/compte#orders).
@@ -130,6 +132,19 @@ export default function SuiviCommandePage() {
                     <div className="order-detail">
                       <p className="mb-2">{orderStatus.description}</p>
                       {order.cancelReason && <p className="text-danger mb-2">Motif : {order.cancelReason}</p>}
+                      {order.pickupPoint && (
+                        <p className="mb-2">
+                          <i className="bi bi-geo me-1"></i>
+                          Point relais <strong>{order.pickupPoint.name}</strong>, {order.pickupPoint.address}, {order.pickupPoint.city}
+                          {order.pickupPoint.openingHours && ` · ${order.pickupPoint.openingHours}`}
+                        </p>
+                      )}
+                      {order.trackingNumber && (
+                        <p className="mb-2">
+                          <i className="bi bi-box-seam me-1"></i>
+                          Suivi du colis : <strong>{order.carrier ? `${order.carrier} ` : ''}{order.trackingNumber}</strong>
+                        </p>
+                      )}
                       <div className="totals mb-3">
                         <div>
                           <span>Livraison ({DELIVERY_LABELS[order.deliveryMethod] ?? order.deliveryMethod})</span>

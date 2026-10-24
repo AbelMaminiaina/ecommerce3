@@ -10,6 +10,9 @@
 // ensuite les règles du paiement garanti (lib/buyerProtection.ts).
 
 import type { Prisma } from '@prisma/client';
+import { isServedCity } from './cities.js';
+
+export { isServedCity };
 
 // Commandes dont le paiement est attendu en ligne : seules elles sont relancées puis annulées faute de paiement.
 // (`not` seul exclurait aussi les anciennes commandes sans moyen de paiement : SQL ignore les NULL.)
@@ -30,27 +33,6 @@ export function getCashOnDeliveryConfig(env: NodeJS.ProcessEnv = process.env): C
     .filter(Boolean);
   const max = Number(env.CASH_ON_DELIVERY_MAX_AMOUNT);
   return { cities, maxAmount: Number.isFinite(max) && max > 0 ? Math.round(max) : 500_000 };
-}
-
-const normalize = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
-// Noms courants de la capitale saisis par les clients
-const CAPITAL_ALIASES = ['antananarivo', 'tana', 'tananarive', 'antananarivo renivohitra'];
-
-export function isServedCity(city: string, cities: string[]): boolean {
-  const given = normalize(city);
-  if (!given) return false;
-  return cities.some((configured) => {
-    const target = normalize(configured);
-    const names = target === 'antananarivo' ? CAPITAL_ALIASES : [target];
-    return names.some((name) => given === name || given.startsWith(`${name} `) || given.includes(target));
-  });
 }
 
 /** Message d'erreur si le paiement à la livraison n'est pas possible pour cette commande ; null sinon */

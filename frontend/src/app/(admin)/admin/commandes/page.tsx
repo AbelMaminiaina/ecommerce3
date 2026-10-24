@@ -17,6 +17,10 @@ interface Order {
   shippingCost: number;
   total: number;
   deliveryMethod: string;
+  shippingZone?: string | null;
+  pickupPoint?: { name: string; address: string; city: string; phone: string | null } | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
   paymentMethod?: string | null;
   paymentStatus?: 'awaiting' | 'submitted' | 'paid' | 'rejected';
   paymentReference?: string | null;
@@ -66,6 +70,8 @@ const deliveryLabels: Record<string, string> = {
   standard: 'Livraison standard',
   express: 'Livraison express',
   retrait: 'Retrait sur place',
+  province: 'Livraison en province',
+  relais: 'Point relais',
 };
 
 export default function AdminOrdersPage() {
@@ -95,10 +101,24 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // Suivi du colis saisi avant « Expédier » (facultatif, envoyé au client par SMS)
+  const [carrier, setCarrier] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+
   const updateOrderStatus = async (orderId: string, newStatus: string, reason?: string) => {
     setUpdatingStatus(true);
     try {
-      await persistOrderStatus(orderId, newStatus, token!, reason);
+      await persistOrderStatus(
+        orderId,
+        newStatus,
+        token!,
+        reason,
+        newStatus === 'shipped' ? { carrier: carrier.trim() || undefined, trackingNumber: trackingNumber.trim() || undefined } : undefined
+      );
+      if (newStatus === 'shipped') {
+        setCarrier('');
+        setTrackingNumber('');
+      }
       await fetchOrders();
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus, ...(reason !== undefined ? { cancelReason: reason } : {}) });
@@ -406,11 +426,21 @@ export default function AdminOrdersPage() {
                     <i className="bi bi-geo-alt text-[16px] leading-none" aria-hidden="true" />
                     Adresse de livraison
                   </h3>
-                  {selectedOrder.address ? (
+                  {selectedOrder.pickupPoint ? (
+                    <div className="space-y-1 text-warm-600">
+                      <p className="font-medium text-warm-800">Point relais {selectedOrder.pickupPoint.name}</p>
+                      <p>{selectedOrder.pickupPoint.address}, {selectedOrder.pickupPoint.city}</p>
+                      {selectedOrder.pickupPoint.phone && <p>{selectedOrder.pickupPoint.phone}</p>}
+                    </div>
+                  ) : selectedOrder.address ? (
                     <div className="space-y-1 text-warm-600">
                       <p>{selectedOrder.address.street}</p>
                       <p>{selectedOrder.address.postalCode} {selectedOrder.address.city}</p>
                       <p>{selectedOrder.address.country}</p>
+                      {selectedOrder.shippingZone && <p className="font-medium text-warm-800">Zone : {selectedOrder.shippingZone}</p>}
+                      {selectedOrder.trackingNumber && (
+                        <p>Suivi : {selectedOrder.carrier ? `${selectedOrder.carrier} ` : ''}{selectedOrder.trackingNumber}</p>
+                      )}
                     </div>
                   ) : (
                     <p className="text-warm-500 italic">Non spécifiée</p>
@@ -526,6 +556,26 @@ export default function AdminOrdersPage() {
               {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
                 <div className="pb-2">
                   <h3 className="font-semibold text-warm-800 mb-3">Changer le statut</h3>
+                  {['confirmed', 'processing'].includes(selectedOrder.status) && selectedOrder.deliveryMethod !== 'retrait' && (
+                    <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                      <input
+                        className="rounded-lg border border-warm-300 px-3 py-2 text-sm"
+                        placeholder="Transporteur (facultatif)"
+                        aria-label="Transporteur"
+                        maxLength={60}
+                        value={carrier}
+                        onChange={(e) => setCarrier(e.target.value)}
+                      />
+                      <input
+                        className="rounded-lg border border-warm-300 px-3 py-2 text-sm"
+                        placeholder="Numéro de suivi (envoyé au client)"
+                        aria-label="Numéro de suivi"
+                        maxLength={80}
+                        value={trackingNumber}
+                        onChange={(e) => setTrackingNumber(e.target.value)}
+                      />
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                     {selectedOrder.status === 'pending' && (
                       <Button

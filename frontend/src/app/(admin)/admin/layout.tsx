@@ -19,6 +19,7 @@ const adminNavigation: ShellNavGroup[] = [
       { name: 'Paiements', href: '/admin/paiements', icon: 'bi-phone' },
       { name: 'Litiges', href: '/admin/litiges', icon: 'bi-shield-exclamation' },
       { name: 'Codes promo', href: '/admin/codes-promo', icon: 'bi-tag' },
+      { name: 'Livraison', href: '/admin/livraison', icon: 'bi-truck' },
       { name: 'Reversements', href: '/admin/reversements', icon: 'bi-wallet2' },
     ],
   },

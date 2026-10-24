@@ -64,8 +64,11 @@ describe('SMS de suivi de commande', () => {
       sendOrderStatusSms({ phone: '0341234567', orderNumber: long, status });
     }
     sendOrderStatusSms({ phone: '0341234567', orderNumber: long, status: 'shipped', pickup: true });
+    // Textes saisis à rallonge (nom du relais, transporteur, numéro de suivi) : tronqués
+    sendOrderStatusSms({ phone: '0341234567', orderNumber: long, status: 'shipped', relayName: 'Épicerie du marché couvert d’Analakely, pavillon 3, porte 12' });
+    sendOrderStatusSms({ phone: '0341234567', orderNumber: long, status: 'shipped', carrier: 'Coopérative KOFMAD transports rapides', trackingNumber: 'KOF-2026-10-25-000123456789' });
 
-    expect(sendMock).toHaveBeenCalledTimes(7);
+    expect(sendMock).toHaveBeenCalledTimes(9);
     for (const [, text] of sendMock.mock.calls) {
       expect(text.length).toBeLessThanOrEqual(160);
       expect(text).toMatch(/^[\x20-\x7E]+$/);

@@ -81,6 +81,8 @@ const deliveryLabels: Record<string, string> = {
   standard: 'Livraison standard (3-5 jours)',
   express: 'Livraison express (1-2 jours)',
   retrait: 'Retrait sur place',
+  province: 'Livraison en province (transporteur)',
+  relais: 'Retrait en point relais',
 };
 
 // Nom de la plateforme, affiché dans les e-mails

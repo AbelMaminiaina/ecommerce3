@@ -415,9 +415,49 @@ enum OrderStatus {
 
 // Méthode de livraison
 enum DeliveryMethod {
-  standard
-  express
-  retrait
+  standard // Livraison à domicile dans la zone locale (Antananarivo par défaut)
+  express // Idem, plus rapide
+  retrait // Retrait sur place
+  province // Envoi dans une autre ville par transporteur (tarif de la zone de la ville)
+  relais // Retrait dans un point relais partenaire
+}
+
+// Zone de livraison en province : tarif et délai par groupe de villes. Une zone « par défaut » couvre les
+// villes absentes de toutes les zones. Modifiable dans l'administration (page Livraison).
+model ShippingZone {
+  id        String   @id @default(uuid())
+  name      String
+  cities    String[] // Noms de villes, comparés sans accents ni majuscules
+  price     Int // Ariary, par commande (chaque vendeur expédie sa commande)
+  delay     String // Ex. « 2 à 4 jours »
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("shipping_zones")
+}
+
+// Point relais partenaire (épicerie, boutique…) où le client retire sa commande
+model PickupPoint {
+  id           String  @id @default(uuid())
+  name         String
+  address      String
+  city         String
+  phone        String?
+  openingHours String?
+  instructions String?
+  fee          Int     @default(0) // Ariary, par commande
+  isActive     Boolean @default(true)
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pickup_points")
 }
 
 // Commandes
@@ -451,6 +491,14 @@ model Order {
 
   status         OrderStatus    @default(pending)
   deliveryMethod DeliveryMethod
+
+  // Livraison en province : zone appliquée (nom figé à la commande) ; point relais choisi
+  shippingZone   String?
+  pickupPointId  String?
+  pickupPoint    PickupPoint? @relation(fields: [pickupPointId], references: [id])
+  // Suivi du colis, saisi à l'expédition (transporteur, coopérative de taxi-brousse…)
+  carrier        String?
+  trackingNumber String?
 
   // Paiement Mobile Money (obligatoire) : la commande n'avance qu'une fois le paiement confirmé
   paymentMethod          PaymentMethod?

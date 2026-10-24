@@ -31,6 +31,10 @@ export interface SellerOrder {
   shippingCost: number;
   total: number;
   deliveryMethod: string;
+  shippingZone?: string | null;
+  pickupPoint?: { name: string; address: string; city: string } | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
   // Paiement Mobile Money : la commande ne peut être traitée qu'une fois le paiement confirmé
   paymentMethod: PaymentMethodId | null;
   paymentStatus: 'awaiting' | 'submitted' | 'paid' | 'rejected';
@@ -93,10 +97,16 @@ export async function getSellerOrders(token: string) {
   return fetchAPI<{ orders: SellerOrder[] }>('/checkout/orders/seller', { token });
 }
 
-export async function updateSellerOrderStatus(orderId: string, status: SellerOrder['status'], token: string, reason?: string) {
+export async function updateSellerOrderStatus(
+  orderId: string,
+  status: SellerOrder['status'],
+  token: string,
+  reason?: string,
+  tracking?: { carrier?: string; trackingNumber?: string }
+) {
   return fetchAPI(`/checkout/orders/${orderId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status, reason }),
+    body: JSON.stringify({ status, reason, ...(tracking ?? {}) }),
     token,
   });
 }

@@ -10,13 +10,16 @@ import { formatDeliveryWindow, formatPrice, formatQuantity, getShippingCost, gro
 import { PageHeader } from '@/components/shop/PageHeader';
 import { createOrder } from '@/lib/api/checkout';
 import { getPaymentMethods, paymentMethodIcon, type PaymentMethodId, type PaymentMethodInfo } from '@/lib/api/payments';
-import { isServedCity } from '@/lib/cashOnDelivery';
+import { isServedCity, findShippingZone } from '@/lib/cities';
+import { getShippingOptions, type ShippingOptions } from '@/lib/api/shipping';
 import { PromoCodeField } from '@/components/shop/PromoCodeField';
 import { forgetReferral } from '@/lib/referral';
 import type { PromoPreview } from '@/lib/api/promo';
 import { filterCheckoutSteps, type CheckoutStepId } from './checkout-steps';
 
-type DeliveryMethod = 'standard' | 'express' | 'retrait';
+type DeliveryMethod = 'standard' | 'express' | 'retrait' | 'province' | 'relais';
+// À domicile (standard / express à Antananarivo, province ailleurs), point relais, ou retrait sur place
+type DeliveryMode = 'home' | 'relais' | 'retrait';
 
 interface GuestInfo {
   name: string;
@@ -50,7 +53,17 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [addressInfo, setAddressInfo] = useState<AddressInfo>({ street: '', city: '', postalCode: '' });
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('home');
+  const [speed, setSpeed] = useState<'standard' | 'express'>('standard');
+  const [pickupPointId, setPickupPointId] = useState<string | null>(null);
+  // Villes locales, zones de province et points relais (sans elles : livraison standard / express comme avant)
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions | null>(null);
+
+  useEffect(() => {
+    getShippingOptions()
+      .then(setShippingOptions)
+      .catch(() => setShippingOptions(null));
+  }, []);
   const [notes, setNotes] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [promo, setPromo] = useState<PromoPreview | null>(null);
@@ -79,6 +92,14 @@ export default function CheckoutPage() {
 
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.items.reduce((sum, item) => sum + unitPrice(item) * item.quantity, 0);
+  // Mode de livraison : la ville décide entre standard / express (Antananarivo et environs) et province
+  const city = addressInfo.city.trim();
+  const isLocalCity = !shippingOptions || !city || isServedCity(city, shippingOptions.localCities);
+  const zone = shippingOptions && city && !isLocalCity ? findShippingZone(city, shippingOptions.zones) : null;
+  const pickupPoint = shippingOptions?.pickupPoints.find((p) => p.id === pickupPointId) ?? null;
+  const deliveryMethod: DeliveryMethod =
+    deliveryMode === 'home' ? (isLocalCity ? speed : 'province') : deliveryMode === 'relais' ? 'relais' : 'retrait';
+
   // Une commande (et des frais de livraison) par vendeur
   const sellerGroups = groupBySeller(cart.items);
   const shippingFor = (method: DeliveryMethod) =>
@@ -88,7 +109,8 @@ export default function CheckoutPage() {
         getShippingCost(
           method,
           group.items.reduce((acc, item) => acc + unitPrice(item) * item.quantity, 0),
-          group.items.some((item) => item.freeShipping)
+          group.items.some((item) => item.freeShipping),
+          { provincePrice: zone?.price, relayFee: pickupPoint?.fee }
         ),
       0
     );
@@ -98,7 +120,8 @@ export default function CheckoutPage() {
   const discount = promo ? Math.min(promo.discount, subtotal) : 0;
   const total = subtotal + shippingCost - discount;
   const belowMoqItems = cart.items.filter((item) => item.quantity < item.moq);
-  const isPickup = deliveryMethod === 'retrait';
+  const isPickup = deliveryMode === 'retrait';
+  const needsAddress = deliveryMode === 'home';
 
   // Paiement à la livraison : clients connectés, ville desservie (ou retrait), montant d'articles plafonné.
   // Le backend refait ces vérifications ; ici elles évitent un aller-retour et expliquent le refus.
@@ -107,7 +130,7 @@ export default function CheckoutPage() {
   const cod = selectedMethod?.cashOnDelivery;
   const codError = !cod
     ? null
-    : !isPickup && !isServedCity(addressInfo.city, cod.cities)
+    : !isPickup && !isServedCity(pickupPoint ? pickupPoint.city : addressInfo.city, cod.cities)
       ? `Le paiement à la livraison est proposé uniquement à ${cod.cities.join(', ')}, ou au retrait sur place.`
       : subtotal > cod.maxAmount
         ? `Le paiement à la livraison est limité à ${formatPrice(cod.maxAmount)} d'articles : choisissez un paiement en ligne.`
@@ -118,7 +141,9 @@ export default function CheckoutPage() {
   // Validité de chaque section du formulaire
   const contactValid =
     guestInfo.name.trim().length >= 2 && EMAIL_PATTERN.test(guestInfo.email.trim()) && guestInfo.phone.trim().length >= 6;
-  const addressValid = isPickup || !!(addressInfo.street.trim() && addressInfo.city.trim());
+  const addressValid =
+    deliveryMode === 'retrait' ||
+    (deliveryMode === 'relais' ? !!pickupPoint : !!(addressInfo.street.trim() && addressInfo.city.trim()) && (isLocalCity || !!zone));
   const paymentValid = belowMoqItems.length === 0 && !!selectedMethod && !codError;
   const stepValid: Record<CheckoutStepId, boolean> = {
     contact: contactValid,
@@ -130,7 +155,7 @@ export default function CheckoutPage() {
 
   const missing = [
     isGuest && !contactValid && 'vos coordonnées (nom, e-mail valide, téléphone)',
-    !addressValid && 'l’adresse de livraison (adresse et ville)',
+    !addressValid && (deliveryMode === 'relais' ? 'le choix d’un point relais' : 'l’adresse de livraison (adresse et ville)'),
     !selectedMethod && 'un moyen de paiement',
     codError && 'un autre moyen de paiement (paiement à la livraison impossible)',
     belowMoqItems.length > 0 && 'les quantités minimum',
@@ -149,7 +174,8 @@ export default function CheckoutPage() {
       const response = await createOrder(
         {
           items: cart.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
-          ...(!isPickup
+          ...(deliveryMode === 'relais' && pickupPoint ? { pickupPointId: pickupPoint.id } : {}),
+          ...(needsAddress
             ? {
                 shippingAddress: {
                   street: addressInfo.street,
@@ -380,26 +406,62 @@ export default function CheckoutPage() {
                           <input
                             type="radio"
                             name="delivery-mode"
-                            checked={!isPickup}
-                            onChange={() => setDeliveryMethod('standard')}
+                            checked={deliveryMode === 'home'}
+                            onChange={() => setDeliveryMode('home')}
                           />
-                          <span className="tab-inner"><i className="bi bi-truck"></i><span>Livraison</span></span>
+                          <span className="tab-inner"><i className="bi bi-truck"></i><span>À domicile</span></span>
                         </label>
+                        {!!shippingOptions?.pickupPoints.length && (
+                          <label className="method-tab">
+                            <input
+                              type="radio"
+                              name="delivery-mode"
+                              checked={deliveryMode === 'relais'}
+                              onChange={() => setDeliveryMode('relais')}
+                            />
+                            <span className="tab-inner"><i className="bi bi-geo"></i><span>Point relais</span></span>
+                          </label>
+                        )}
                         <label className="method-tab">
                           <input
                             type="radio"
                             name="delivery-mode"
-                            checked={isPickup}
-                            onChange={() => setDeliveryMethod('retrait')}
+                            checked={deliveryMode === 'retrait'}
+                            onChange={() => setDeliveryMode('retrait')}
                           />
                           <span className="tab-inner"><i className="bi bi-shop"></i><span>Retrait sur place</span></span>
                         </label>
                       </div>
 
-                      {isPickup ? (
+                      {deliveryMode === 'retrait' ? (
                         <div className="alt-method-msg">
                           <i className="bi bi-shop me-2"></i>
                           Vous récupérez votre commande sur place, sans frais de livraison. Nous vous contactons dès qu&apos;elle est prête.
+                        </div>
+                      ) : deliveryMode === 'relais' ? (
+                        <div className="relay-list" role="radiogroup" aria-label="Points relais">
+                          {shippingOptions?.pickupPoints.map((point) => (
+                            <label key={point.id} className={`relay-option${pickupPointId === point.id ? ' selected' : ''}`}>
+                              <input
+                                type="radio"
+                                name="pickup-point"
+                                checked={pickupPointId === point.id}
+                                onChange={() => setPickupPointId(point.id)}
+                              />
+                              <span className="relay-body">
+                                <strong>{point.name}</strong>
+                                <span>{point.address}, {point.city}</span>
+                                {point.openingHours && <small><i className="bi bi-clock me-1"></i>{point.openingHours}</small>}
+                                {point.instructions && <small>{point.instructions}</small>}
+                              </span>
+                              <span className={`tab-price${point.fee === 0 ? ' free' : ''}`}>
+                                {point.fee === 0 ? 'Gratuit' : formatPrice(point.fee)}
+                              </span>
+                            </label>
+                          ))}
+                          <p className="small text-muted mb-0">
+                            Nous vous prévenons par SMS dès l&apos;envoi. Munissez-vous de votre numéro de commande pour la retirer.
+                          </p>
                         </div>
                       ) : (
                         <>
@@ -441,7 +503,20 @@ export default function CheckoutPage() {
                             </div>
                           </div>
 
-                          {steps.some((s) => s.id === 'livraison') && (
+                          {steps.some((s) => s.id === 'livraison') && !isLocalCity && (
+                            <div className="alt-method-msg mt-3">
+                              <i className="bi bi-signpost-split me-2"></i>
+                              {zone ? (
+                                <>
+                                  <strong>Livraison en province</strong> ({zone.name}) : {formatPrice(zone.price)} par commande,{' '}
+                                  {zone.delay}. Envoi par transporteur, avec un numéro de suivi par SMS.
+                                </>
+                              ) : (
+                                <>La livraison n&apos;est pas encore proposée dans cette ville : choisissez un point relais ou le retrait.</>
+                              )}
+                            </div>
+                          )}
+                          {steps.some((s) => s.id === 'livraison') && isLocalCity && (
                             <>
                               <label className="d-block fw-medium text-dark mt-4 mb-2 sw-field-label">Délai de livraison</label>
                               <div className="method-tabs mb-0">
@@ -453,8 +528,8 @@ export default function CheckoutPage() {
                                         type="radio"
                                         name="delivery-speed"
                                         value={method}
-                                        checked={deliveryMethod === method}
-                                        onChange={() => setDeliveryMethod(method)}
+                                        checked={speed === method}
+                                        onChange={() => setSpeed(method)}
                                       />
                                       <span className="tab-inner">
                                         <span>{method === 'standard' ? 'Standard' : 'Express'}</span>
@@ -669,7 +744,15 @@ export default function CheckoutPage() {
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="cost-line">
-                    <span>{isPickup ? 'Retrait sur place' : `Livraison${deliveryMethod === 'express' ? ' express' : ''}`}</span>
+                    <span>
+                      {deliveryMethod === 'retrait'
+                        ? 'Retrait sur place'
+                        : deliveryMethod === 'relais'
+                          ? 'Point relais'
+                          : deliveryMethod === 'province'
+                            ? `Livraison en province${zone ? ` (${zone.name})` : ''}`
+                            : `Livraison${deliveryMethod === 'express' ? ' express' : ''}`}
+                    </span>
                     {shippingCost === 0 ? <span className="free">Gratuit</span> : <span>{formatPrice(shippingCost)}</span>}
                   </div>
                   {discount > 0 && (

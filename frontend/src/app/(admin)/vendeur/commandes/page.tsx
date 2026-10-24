@@ -30,6 +30,9 @@ export default function SellerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Suivi du colis saisi avant « Marquer expédiée » (facultatif), par commande
+  const [tracking, setTracking] = useState<Record<string, { carrier: string; trackingNumber: string }>>({});
+  const trackingOf = (orderId: string) => tracking[orderId] ?? { carrier: '', trackingNumber: '' };
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -51,7 +54,14 @@ export default function SellerOrdersPage() {
     if (!token) return;
     setBusy(order.id);
     try {
-      await updateSellerOrderStatus(order.id, status, token, reason);
+      const t = tracking[order.id];
+      await updateSellerOrderStatus(
+        order.id,
+        status,
+        token,
+        reason,
+        status === 'shipped' && t ? { carrier: t.carrier.trim() || undefined, trackingNumber: t.trackingNumber.trim() || undefined } : undefined
+      );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action impossible');
@@ -139,10 +149,20 @@ export default function SellerOrdersPage() {
                     <p className="mt-2">
                       {order.deliveryMethod === 'retrait'
                         ? 'Retrait sur place'
-                        : order.address
-                          ? `${order.address.street}, ${order.address.city} ${order.address.postalCode}`
-                          : 'Adresse non renseignée'}
+                        : order.pickupPoint
+                          ? `Point relais ${order.pickupPoint.name} — ${order.pickupPoint.address}, ${order.pickupPoint.city}`
+                          : order.address
+                            ? `${order.address.street}, ${order.address.city} ${order.address.postalCode}`
+                            : 'Adresse non renseignée'}
                     </p>
+                    {order.deliveryMethod === 'province' && (
+                      <p className="font-medium text-warm-800">
+                        Livraison en province{order.shippingZone ? ` (${order.shippingZone})` : ''} : envoi par transporteur
+                      </p>
+                    )}
+                    {order.trackingNumber && (
+                      <p>Suivi : {order.carrier ? `${order.carrier} ` : ''}{order.trackingNumber}</p>
+                    )}
                     {order.notes && <p className="mt-2 italic">« {order.notes} »</p>}
                     {order.cancelReason && <p className="mt-2 text-red-600">Annulation : {order.cancelReason}</p>}
                     {order.protection === 'disputed' && order.disputeReason && (
@@ -191,6 +211,30 @@ export default function SellerOrdersPage() {
                           ? 'Paiement à la livraison : la plateforme marque la commande livrée à la remise de l’argent par le livreur.'
                           : 'À préparer une fois le paiement confirmé par la plateforme.'}
                       </p>
+                    )}
+                    {step?.to === 'shipped' && canAdvance && order.deliveryMethod !== 'retrait' && (
+                      <div className="grid w-full gap-2 sm:grid-cols-2">
+                        <input
+                          className="rounded-lg border border-warm-300 px-3 py-2 text-sm"
+                          placeholder="Transporteur (facultatif)"
+                          aria-label="Transporteur"
+                          maxLength={60}
+                          value={tracking[order.id]?.carrier ?? ''}
+                          onChange={(e) =>
+                            setTracking({ ...tracking, [order.id]: { ...trackingOf(order.id), carrier: e.target.value } })
+                          }
+                        />
+                        <input
+                          className="rounded-lg border border-warm-300 px-3 py-2 text-sm"
+                          placeholder="Numéro de suivi (facultatif, envoyé au client)"
+                          aria-label="Numéro de suivi"
+                          maxLength={80}
+                          value={tracking[order.id]?.trackingNumber ?? ''}
+                          onChange={(e) =>
+                            setTracking({ ...tracking, [order.id]: { ...trackingOf(order.id), trackingNumber: e.target.value } })
+                          }
+                        />
+                      </div>
                     )}
                     {step && canAdvance && (
                       <button

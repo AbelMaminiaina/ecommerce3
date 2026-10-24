@@ -11,7 +11,11 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - Panier persistant côté client (Zustand + localStorage), avec ajout/suppression/modification de quantité
 - Commande sans compte (guest checkout)
 - Connexion par téléphone sans mot de passe : code à 6 chiffres envoyé par SMS (valable 10 min, 5 essais, 1 minute entre deux envois, 5 codes par heure et par numéro). Un numéro inconnu crée un compte particulier (prénom + nom, sans e-mail) ; un compte créé par e-mail peut ajouter son numéro depuis « Mon compte »
-- Frais de livraison calculés automatiquement (standard, express, retrait sur place) avec livraison gratuite au-delà de 200 000 Ar
+- Livraison à domicile standard ou express à Antananarivo et ses environs (`LOCAL_DELIVERY_CITIES`), gratuite au-delà de 100 000 Ar d'articles
+- Livraison en province par transporteur : tarif et délai selon la zone de la ville (Hautes Terres, Côte Est, Nord-Ouest, Nord, Sud, autres villes), modifiables dans l'administration > Livraison ; le mode est choisi automatiquement selon la ville saisie
+- Points relais partenaires (épiceries, boutiques) gérés dans l'administration : adresse, horaires, indications, frais ; le client choisit son relais au paiement
+- Retrait sur place gratuit
+- Numéro de suivi du colis (transporteur + numéro) saisi par le vendeur ou l'administrateur à l'expédition, envoyé au client par SMS et affiché dans « Mon compte »
 - Suivi de commande côté client par numéro de commande ou par e-mail
 
 ## Paiement

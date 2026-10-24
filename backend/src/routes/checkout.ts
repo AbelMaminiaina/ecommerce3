@@ -29,6 +29,7 @@ import { buyerProtectionDays, hasOpenDispute, protectionView } from '../lib/buye
 import { markOrdersPaid } from '../services/paymentSettlement.js';
 import { PromoError, allocateDiscount } from '../lib/promo.js';
 import { claimPromo, releasePromoIfCancelled, resolvePromo } from '../services/promo.js';
+import { DELIVERY_METHODS, HOME_METHODS, deliveryMethodError, findShippingZone, pickupPointView } from '../lib/delivery.js';
 
 const router = Router();
 
@@ -47,7 +48,9 @@ const checkoutSchema = z.object({
       country: z.string().optional(),
     })
     .optional(),
-  deliveryMethod: z.enum(['standard', 'express', 'retrait']),
+  deliveryMethod: z.enum(DELIVERY_METHODS),
+  // Point relais choisi (mode « relais »)
+  pickupPointId: z.string().max(64).optional(),
   // Paiement en ligne obligatoire (Mobile Money, carte bancaire, PayPal) : pas de paiement différé ni à la livraison
   paymentMethod: z.enum(PAYMENT_METHOD_IDS),
   notes: z.string().optional(),
@@ -95,8 +98,29 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
   try {
     const validatedData = checkoutSchema.parse(req.body);
 
-    if (validatedData.deliveryMethod !== 'retrait' && !validatedData.shippingAddress) {
+    const homeDelivery = HOME_METHODS.includes(validatedData.deliveryMethod);
+    if (homeDelivery && !validatedData.shippingAddress) {
       return res.status(400).json({ success: false, error: 'Adresse de livraison requise' });
+    }
+
+    // Mode adapté à l'adresse (Antananarivo : standard / express ; ailleurs : province), point relais actif
+    const deliveryError = homeDelivery ? deliveryMethodError(validatedData.deliveryMethod, validatedData.shippingAddress?.city) : null;
+    if (deliveryError) return res.status(400).json({ success: false, error: deliveryError });
+
+    const pickupPoint =
+      validatedData.deliveryMethod === 'relais' && validatedData.pickupPointId
+        ? await prisma.pickupPoint.findUnique({ where: { id: validatedData.pickupPointId } })
+        : null;
+    if (validatedData.deliveryMethod === 'relais' && !pickupPoint?.isActive) {
+      return res.status(400).json({ success: false, error: "Choisissez un point relais (celui-ci n'est plus disponible)" });
+    }
+
+    const zone =
+      validatedData.deliveryMethod === 'province'
+        ? findShippingZone(validatedData.shippingAddress!.city, await prisma.shippingZone.findMany())
+        : null;
+    if (validatedData.deliveryMethod === 'province' && !zone) {
+      return res.status(400).json({ success: false, error: "La livraison en province n'est pas disponible pour le moment" });
     }
 
     // Visiteur sans compte : traité comme un particulier (prix de base)
@@ -190,7 +214,8 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
       const codError = cashOnDeliveryError({
         isGuest,
         deliveryMethod: validatedData.deliveryMethod,
-        city: validatedData.shippingAddress?.city,
+        // Point relais : l'argent est remis au relais, dans sa ville
+        city: pickupPoint ? pickupPoint.city : validatedData.shippingAddress?.city,
         itemsTotal: itemsSubtotal,
       });
       if (codError) return res.status(400).json({ success: false, error: codError });
@@ -214,7 +239,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
 
     // Adresse (liée à l'entreprise ou au particulier) si fournie : une seule pour tout le panier
     let address = null;
-    if (validatedData.shippingAddress) {
+    if (validatedData.shippingAddress && homeDelivery) {
       address = await prisma.address.create({
         data: {
           ...(company ? { companyId: company.id } : isGuest ? {} : { userId: req.user!.userId }),
@@ -272,6 +297,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         subtotal,
         freeShippingProductIds,
         groupItems,
+        { provincePrice: zone?.price, relayFee: pickupPoint?.fee },
       );
       const total = subtotal + shippingCost - discountAmount;
 
@@ -305,6 +331,8 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
           checkoutGroup,
           addressId: address?.id,
           deliveryMethod: validatedData.deliveryMethod as DeliveryMethod,
+          shippingZone: zone?.name ?? null,
+          pickupPointId: pickupPoint?.id ?? null,
           status: orderStatus,
           subtotal,
           shippingCost,
@@ -353,6 +381,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         contactPhone:
           (company ? company.contactPhone : guest ? guest.phone : customerUser!.verifiedPhone ?? customerUser!.phone) ??
           undefined,
+        // Point relais : son adresse tient lieu d'adresse de livraison dans l'e-mail
         address: address
           ? {
               street: address.street,
@@ -360,7 +389,14 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
               postalCode: address.postalCode,
               country: address.country,
             }
-          : null,
+          : pickupPoint
+            ? {
+                street: `Point relais ${pickupPoint.name}, ${pickupPoint.address}${pickupPoint.openingHours ? ` (${pickupPoint.openingHours})` : ''}`,
+                city: pickupPoint.city,
+                postalCode: '',
+                country: 'Madagascar',
+              }
+            : null,
         deliveryMethod: validatedData.deliveryMethod,
         items: groupItems.map((item) => ({
           name: item.product.name,
@@ -471,6 +507,7 @@ router.get('/orders', authenticate, requirePlatformAdmin, async (_req: Request, 
         customer: true,
         seller: { select: { name: true } },
         address: true,
+        pickupPoint: true,
         items: {
           include: {
             product: {
@@ -499,6 +536,10 @@ router.get('/orders', authenticate, requirePlatformAdmin, async (_req: Request, 
       shippingCost: order.shippingCost,
       total: order.total,
       deliveryMethod: order.deliveryMethod,
+      shippingZone: order.shippingZone,
+      pickupPoint: order.pickupPoint ? pickupPointView(order.pickupPoint) : null,
+      carrier: order.carrier,
+      trackingNumber: order.trackingNumber,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       paymentReference: order.paymentReference,
@@ -541,6 +582,7 @@ router.get('/orders/mine', authenticate, requireCanOrder, async (req: Request, r
       include: {
         seller: { select: { name: true } },
         address: true,
+        pickupPoint: true,
         items: {
           include: { product: { select: { name: true, slug: true, images: true } } },
         },
@@ -558,6 +600,10 @@ router.get('/orders/mine', authenticate, requireCanOrder, async (req: Request, r
       shippingCost: order.shippingCost,
       total: order.total,
       deliveryMethod: order.deliveryMethod,
+      shippingZone: order.shippingZone,
+      pickupPoint: order.pickupPoint ? pickupPointView(order.pickupPoint) : null,
+      carrier: order.carrier,
+      trackingNumber: order.trackingNumber,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       paymentReference: order.paymentReference,
@@ -600,6 +646,7 @@ router.get('/orders/seller', authenticate, requireApprovedCompany, async (req: R
         company: true,
         user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
         address: true,
+        pickupPoint: true,
         items: { include: { product: { select: { name: true, slug: true } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -620,6 +667,10 @@ router.get('/orders/seller', authenticate, requireApprovedCompany, async (req: R
         shippingCost: order.shippingCost,
         total: order.total,
         deliveryMethod: order.deliveryMethod,
+        shippingZone: order.shippingZone,
+        pickupPoint: order.pickupPoint ? pickupPointView(order.pickupPoint) : null,
+        carrier: order.carrier,
+        trackingNumber: order.trackingNumber,
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,
         // Part du vendeur (calculée à la confirmation du paiement) ; reversed = déjà versée par la plateforme
@@ -658,6 +709,14 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
   try {
     const { orderId } = req.params;
     const { status, reason } = req.body;
+    // Expédition : transporteur et numéro de suivi, facultatifs (communiqués au client par SMS)
+    const tracking =
+      status === 'shipped'
+        ? {
+            carrier: typeof req.body.carrier === 'string' ? req.body.carrier.trim().slice(0, 60) || null : null,
+            trackingNumber: typeof req.body.trackingNumber === 'string' ? req.body.trackingNumber.trim().slice(0, 80) || null : null,
+          }
+        : null;
 
     const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
@@ -746,6 +805,7 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
         status,
         ...(status === 'cancelled' ? { cancelReason: reason || null, stockReserved: false } : {}),
         ...(mustReserveStock ? { stockReserved: true } : {}),
+        ...(tracking ?? {}),
         // Paiement garanti : le délai pour signaler un problème part de la livraison (0 jour = reçue d'office)
         ...(status === 'delivered' && !existingOrder.deliveredAt
           ? { deliveredAt: now, ...(buyerProtectionDays() === 0 ? { receivedAt: now, receivedBy: 'auto' } : {}) }
@@ -756,6 +816,7 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
         user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
         customer: true,
         address: true,
+        pickupPoint: true,
         items: {
           include: {
             product: { select: { name: true } },
@@ -807,7 +868,15 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
     }
 
     if (status === 'shipped' || status === 'delivered' || status === 'cancelled') {
-      sendOrderStatusSms({ phone: contactPhone, orderNumber: order.orderNumber, status, pickup: order.deliveryMethod === 'retrait' });
+      sendOrderStatusSms({
+        phone: contactPhone,
+        orderNumber: order.orderNumber,
+        status,
+        pickup: order.deliveryMethod === 'retrait',
+        relayName: order.pickupPoint?.name,
+        carrier: order.carrier,
+        trackingNumber: order.trackingNumber,
+      });
     }
 
     // Envoi asynchrone des emails de notification (ne bloque pas la réponse)
@@ -878,6 +947,7 @@ router.get('/track', trackLimiter, async (req: Request, res: Response) => {
       include: {
         seller: { select: { name: true } },
         address: true,
+        pickupPoint: true,
         items: { include: { product: { select: { name: true, slug: true } } } },
       },
     });
@@ -897,6 +967,10 @@ router.get('/track', trackLimiter, async (req: Request, res: Response) => {
       shippingCost: order.shippingCost,
       total: order.total,
       deliveryMethod: order.deliveryMethod,
+      shippingZone: order.shippingZone,
+      pickupPoint: order.pickupPoint ? pickupPointView(order.pickupPoint) : null,
+      carrier: order.carrier,
+      trackingNumber: order.trackingNumber,
       cancelReason: order.cancelReason,
       createdAt: order.createdAt,
       address: order.address
@@ -927,6 +1001,7 @@ router.get('/:orderNumber', authenticate, async (req: Request, res: Response) =>
         company: { select: { id: true, name: true, legalName: true, contactEmail: true, contactPhone: true } },
         customer: true,
         address: true,
+        pickupPoint: true,
         items: {
           include: {
             product: { select: { id: true, name: true, slug: true, images: true, unit: true } },

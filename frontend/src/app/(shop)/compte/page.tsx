@@ -36,6 +36,8 @@ const DELIVERY_LABELS: Record<string, string> = {
   standard: 'Livraison standard',
   express: 'Livraison express',
   retrait: 'Retrait sur place',
+  province: 'Livraison en province',
+  relais: 'Point relais',
 };
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -119,6 +121,21 @@ function OrderItem({ order, token, onChange }: { order: CompanyOrder; token?: st
             <p className="mb-2">
               <i className="bi bi-geo-alt me-1"></i>
               {order.address.street}, {order.address.postalCode} {order.address.city}
+              {order.shippingZone && ` · zone ${order.shippingZone}`}
+            </p>
+          )}
+          {order.pickupPoint && (
+            <p className="order-shipping">
+              <i className="bi bi-geo me-1"></i>
+              Point relais <strong>{order.pickupPoint.name}</strong>, {order.pickupPoint.address}, {order.pickupPoint.city}
+              {order.pickupPoint.openingHours && ` · ${order.pickupPoint.openingHours}`}
+              {order.pickupPoint.phone && ` · ${order.pickupPoint.phone}`}
+            </p>
+          )}
+          {order.trackingNumber && (
+            <p className="order-shipping">
+              <i className="bi bi-box-seam me-1"></i>
+              Suivi du colis : <strong>{order.carrier ? `${order.carrier} ` : ''}{order.trackingNumber}</strong>
             </p>
           )}
           {order.cancelReason && <p className="text-danger mb-2">Motif d&apos;annulation : {order.cancelReason}</p>}

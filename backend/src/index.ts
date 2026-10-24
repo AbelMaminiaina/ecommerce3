@@ -20,6 +20,7 @@ import uploadsRouter from './routes/uploads.js';
 import advisorRouter from './routes/advisor.js';
 import orderProtectionRouter from './routes/orderProtection.js';
 import promoRouter from './routes/promo.js';
+import shippingRouter from './routes/shipping.js';
 import { UPLOAD_DIR, UPLOADS_URL_PREFIX } from './lib/uploads.js';
 import { connectRedis, redis, isRedisAvailable } from './lib/redis.js';
 import { authenticate, requirePlatformAdmin } from './middleware/auth.js';
@@ -70,6 +71,7 @@ app.use('/api/uploads', uploadsRouter);
 app.use('/api/advisor', advisorRouter);
 app.use('/api/orders', orderProtectionRouter);
 app.use('/api/promo', promoRouter);
+app.use('/api/shipping', shippingRouter);
 
 // Health check with Redis status
 app.get('/api/health', async (_req, res) => {

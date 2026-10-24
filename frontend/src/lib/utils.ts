@@ -133,6 +133,7 @@ export function getDeliveryEstimate(method: string): string {
     'standard': '3-5 jours ouvrés',
     'express': '1-2 jours ouvrés',
     'retrait': 'Disponible sous 24h',
+    'relais': 'Selon le point relais',
   };
   return estimates[method] || '';
 }
@@ -155,10 +156,14 @@ export const SHIPPING_COSTS: Record<string, number> = {
 export function getShippingCost(
   method: string,
   subtotal: number,
-  hasFreeShippingItem = false
+  hasFreeShippingItem = false,
+  // Province : tarif de la zone ; point relais : ses frais (pas de seuil de gratuité)
+  rates: { provincePrice?: number; relayFee?: number } = {}
 ): number {
   if (hasFreeShippingItem) return 0;
   if (method === 'retrait') return 0;
+  if (method === 'province') return rates.provincePrice ?? 0;
+  if (method === 'relais') return rates.relayFee ?? 0;
   if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
   return SHIPPING_COSTS[method] ?? 0;
 }

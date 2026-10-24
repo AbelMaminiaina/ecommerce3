@@ -1,6 +1,7 @@
 import { fetchAPI } from './config';
 import { CompanyOrder, DeliveryMethod } from '@/types';
 import type { PaymentMethodId, PaymentStatus } from './payments';
+import type { PickupPoint } from './shipping';
 
 interface CheckoutData {
   items: { productId: string; quantity: number }[];
@@ -11,6 +12,8 @@ interface CheckoutData {
     country?: string;
   };
   deliveryMethod: DeliveryMethod;
+  /** Point relais choisi (mode « relais ») */
+  pickupPointId?: string;
   // Mobile Money, carte, PayPal, ou paiement à la livraison (clients connectés, sous conditions)
   paymentMethod: PaymentMethodId;
   notes?: string;
@@ -75,6 +78,10 @@ export interface GuestOrder {
   shippingCost: number;
   total: number;
   deliveryMethod: string;
+  shippingZone?: string | null;
+  pickupPoint?: PickupPoint | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
   cancelReason: string | null;
   createdAt: string;
   address: { street: string; city: string; postalCode: string; country: string } | null;
@@ -95,10 +102,17 @@ export async function getAllOrders<T>(token: string): Promise<{ orders: T[] }> {
 }
 
 // Changement de statut ; `reason` accompagne une annulation
-export async function updateOrderStatus(orderId: string, status: string, token: string, reason?: string) {
+// tracking : transporteur et numéro de suivi, facultatifs, à l'expédition (envoyés au client par SMS)
+export async function updateOrderStatus(
+  orderId: string,
+  status: string,
+  token: string,
+  reason?: string,
+  tracking?: { carrier?: string; trackingNumber?: string }
+) {
   return fetchAPI(`/checkout/orders/${orderId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status, ...(reason !== undefined ? { reason } : {}) }),
+    body: JSON.stringify({ status, ...(reason !== undefined ? { reason } : {}), ...(tracking ?? {}) }),
     token,
   });
 }

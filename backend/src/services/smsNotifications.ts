@@ -30,6 +30,14 @@ export function smsDateTime(date: Date): string {
   return `${get('day')}/${get('month')} a ${get('hour')}h${get('minute')}`;
 }
 
+// Texte saisi (nom d'un relais, transporteur) sans accents ni caractères hors SMS
+const ascii = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim();
+
 const orderRef = (orderNumbers: string[]) =>
   orderNumbers.length === 1 ? `Commande ${orderNumbers[0]}` : `Commandes ${orderNumbers[0]} (+${orderNumbers.length - 1})`;
 
@@ -85,13 +93,27 @@ export function sendOrderStatusSms(params: {
   status: 'shipped' | 'delivered' | 'cancelled';
   /** Retrait sur place : « prete » au lieu de « expediee » */
   pickup?: boolean;
+  /** Point relais de la commande */
+  relayName?: string | null;
+  /** Suivi du colis saisi à l'expédition (province) */
+  carrier?: string | null;
+  trackingNumber?: string | null;
 }): void {
   const { orderNumber, status, pickup } = params;
   const days = buyerProtectionDays();
+  // Longueurs bornées : le texte doit tenir dans un SMS de 160 caractères
+  const relay = params.relayName ? ascii(params.relayName).slice(0, 40) : null;
+  const tracking = params.trackingNumber
+    ? ` Suivi : ${params.carrier ? `${ascii(params.carrier).slice(0, 20)} ` : ''}${ascii(params.trackingNumber).slice(0, 25)}.`
+    : '';
   const text = {
-    shipped: pickup
-      ? `Tsena Pro : votre commande ${orderNumber} est prete. Vous pouvez venir la retirer.`
-      : `Tsena Pro : votre commande ${orderNumber} a ete expediee. Elle arrive bientot !`,
+    shipped: relay
+      ? `Tsena Pro : commande ${orderNumber} en route vers le point relais ${relay}. Retrait avec votre numero de commande.`
+      : pickup
+        ? `Tsena Pro : votre commande ${orderNumber} est prete. Vous pouvez venir la retirer.`
+        : tracking
+          ? `Tsena Pro : votre commande ${orderNumber} a ete expediee.${tracking}`
+          : `Tsena Pro : votre commande ${orderNumber} a ete expediee. Elle arrive bientot !`,
     // Paiement garanti : l'acheteur peut signaler un problème avant que le vendeur soit payé
     delivered:
       days > 0
