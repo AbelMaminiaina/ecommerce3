@@ -16,6 +16,9 @@ export const queryKeys = {
     all: () => ['orders'] as const,
     mine: () => ['orders', 'mine'] as const,
   },
+  shipping: {
+    options: () => ['shipping', 'options'] as const,
+  },
   payment: {
     methods: () => ['payment', 'methods'] as const,
     status: (orderNumber: string, email?: string) => ['payment', 'status', orderNumber, email ?? null] as const,

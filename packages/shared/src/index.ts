@@ -1,5 +1,6 @@
 export * from './types';
 export * from './pricing';
+export * from './cities';
 export * from './format';
 export * from './schemas';
 export * from './cart';

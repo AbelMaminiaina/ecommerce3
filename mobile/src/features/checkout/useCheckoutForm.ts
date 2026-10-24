@@ -1,18 +1,30 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
+  findShippingZone,
   guestSchema,
+  isServedCity,
   shippingAddressSchema,
+  shippingApi,
   summarizeCart,
   type DeliveryMethod,
   type PaymentMethodId,
 } from '@tsena/shared';
+import { api } from '../../lib/api';
+import { queryKeys } from '../queryKeys';
 import { useAuth, useTieredPricing } from '../auth/store';
 import { useCart } from '../cart/store';
 import { useCreateOrder } from '../orders/queries';
 import { useGuestOrders } from '../payment/guestOrders';
 import { usePaymentMethods } from '../payment/usePayment';
 
-export const DELIVERY_METHODS: DeliveryMethod[] = ['standard', 'express', 'retrait'];
+/** À domicile (standard / express à Antananarivo, province ailleurs), point relais, ou retrait sur place */
+export type DeliveryMode = 'home' | 'relais' | 'retrait';
+export const SPEEDS = ['standard', 'express'] as const;
+
+/** Villes desservies à domicile, zones de province et points relais (sans elles : standard / express comme avant) */
+export const useShippingOptions = () =>
+  useQuery({ queryKey: queryKeys.shipping.options(), queryFn: () => shippingApi.options(api), staleTime: 10 * 60 * 1000 });
 
 type Errors = Record<string, string | undefined>;
 
@@ -30,24 +42,42 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
   const signedIn = useAuth((s) => s.status === 'signed-in');
   const tiered = useTieredPricing();
   const rememberGuest = useGuestOrders((s) => s.remember);
-  const methods = usePaymentMethods();
+  const paymentMethods = usePaymentMethods();
+  const shipping = useShippingOptions();
   const order = useCreateOrder();
 
-  const [delivery, setDelivery] = useState<DeliveryMethod>('standard');
+  const [mode, setMode] = useState<DeliveryMode>('home');
+  const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>('standard');
+  const [pickupPointId, setPickupPointId] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethodId | null>(null);
   const [address, setAddress] = useState({ street: '', city: '', postalCode: '' });
   const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Errors>({});
 
+  // La ville décide du mode à domicile : standard / express à Antananarivo et environs, province ailleurs
+  const options = shipping.data;
+  const city = address.city.trim();
+  const isLocalCity = !options || !city || isServedCity(city, options.localCities);
+  const zone = options && city && !isLocalCity ? findShippingZone(city, options.zones) : null;
+  const pickupPoint = options?.pickupPoints.find((p) => p.id === pickupPointId) ?? null;
+  const delivery: DeliveryMethod = mode === 'home' ? (isLocalCity ? speed : 'province') : mode;
+
+  // Paiement à la livraison : réservé aux clients connectés (refusé par le serveur sinon)
+  const methods = {
+    ...paymentMethods,
+    data: paymentMethods.data?.filter((m) => signedIn || m.id !== 'cash_on_delivery'),
+  };
   // Premier moyen proposé tant que le client n'a pas choisi
   const selectedMethod = method ?? methods.data?.[0]?.id ?? null;
-  const summary = summarizeCart(items, delivery, tiered);
+  const summary = summarizeCart(items, delivery, tiered, { provincePrice: zone?.price, relayFee: pickupPoint?.fee });
 
   const submit = () => {
     const next: Errors = {};
-    const addr = delivery === 'retrait' ? null : shippingAddressSchema.safeParse(address);
+    const addr = mode === 'home' ? shippingAddressSchema.safeParse(address) : null;
     if (addr && !addr.success) Object.assign(next, fieldErrors(addr.error.issues));
+    if (addr?.success && !isLocalCity && !zone) next.city = "Livraison pas encore proposée dans cette ville : choisissez un point relais";
+    if (mode === 'relais' && !pickupPoint) next.pickupPoint = 'Choisissez un point relais';
     const who = signedIn ? null : guestSchema.safeParse(guest);
     if (who && !who.success) Object.assign(next, fieldErrors(who.error.issues));
     if (!selectedMethod) next.method = 'Choisissez un moyen de paiement';
@@ -58,6 +88,7 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
       {
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         deliveryMethod: delivery,
+        ...(mode === 'relais' && pickupPoint ? { pickupPointId: pickupPoint.id } : {}),
         paymentMethod: selectedMethod,
         shippingAddress: addr?.success ? { ...addr.data, country: 'Madagascar' } : undefined,
         guest: who?.success ? who.data : undefined,
@@ -82,7 +113,15 @@ export function useCheckoutForm(onOrdered: (orderNumber: string) => void) {
     empty: items.length === 0 && !order.isSuccess,
     summary,
     delivery,
-    setDelivery,
+    mode,
+    setMode,
+    speed,
+    setSpeed,
+    isLocalCity,
+    zone,
+    pickupPoints: options?.pickupPoints ?? [],
+    pickupPointId,
+    setPickupPointId,
     methods,
     selectedMethod,
     setMethod,

@@ -8,7 +8,16 @@ export const SHIPPING_COSTS: Record<DeliveryMethod, number> = {
   standard: 3000,
   express: 5000,
   retrait: 0,
+  // Province : tarif de la zone ; point relais : ses frais (voir ShippingRates)
+  province: 0,
+  relais: 0,
 };
+
+/** Tarifs qui dépendent de l'adresse : zone de province et point relais choisis */
+export interface ShippingRates {
+  provincePrice?: number;
+  relayFee?: number;
+}
 
 /** Vente en gros uniquement : quantité minimum plancher */
 export const MIN_WHOLESALE_QTY = 10;
@@ -26,11 +35,20 @@ export function resolveUnitPrice(
 }
 
 /**
- * Frais de livraison d'une commande : offerts si un produit est « livraison gratuite », pour le retrait,
- * ou au-dessus du seuil ; sinon forfait par mode de livraison.
+ * Frais de livraison d'une commande : offerts si un produit est « livraison gratuite » ou pour le retrait ;
+ * province au tarif de la zone et point relais à ses frais (sans seuil de gratuité) ; à domicile, offerts
+ * au-dessus du seuil, sinon forfait par mode.
  */
-export function getShippingCost(method: DeliveryMethod, subtotal: number, hasFreeShippingItem = false): number {
-  if (hasFreeShippingItem || method === 'retrait' || subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
+export function getShippingCost(
+  method: DeliveryMethod,
+  subtotal: number,
+  hasFreeShippingItem = false,
+  rates: ShippingRates = {}
+): number {
+  if (hasFreeShippingItem || method === 'retrait') return 0;
+  if (method === 'province') return rates.provincePrice ?? 0;
+  if (method === 'relais') return rates.relayFee ?? 0;
+  if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
   return SHIPPING_COSTS[method] ?? 0;
 }
 
@@ -71,10 +89,10 @@ export interface CartSummary {
 }
 
 /** Totaux du panier, avec les frais de livraison calculés séparément pour chaque vendeur */
-export function summarizeCart(items: CartItem[], method: DeliveryMethod, tieredPricing = false): CartSummary {
+export function summarizeCart(items: CartItem[], method: DeliveryMethod, tieredPricing = false, rates: ShippingRates = {}): CartSummary {
   const groups = groupBySeller(items).map((group) => {
     const subtotal = group.items.reduce((sum, item) => sum + lineTotal(item, tieredPricing), 0);
-    const shipping = getShippingCost(method, subtotal, group.items.some((i) => i.freeShipping));
+    const shipping = getShippingCost(method, subtotal, group.items.some((i) => i.freeShipping), rates);
     return { ...group, subtotal, shipping };
   });
   const subtotal = groups.reduce((sum, g) => sum + g.subtotal, 0);

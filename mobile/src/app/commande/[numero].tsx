@@ -54,7 +54,9 @@ export default function OrderPayment() {
 
   const paid = s.paymentStatus === 'paid';
   const cancelled = s.orders.every((o) => o.status === 'cancelled');
-  const canPay = !paid && !cancelled && (s.paymentStatus === 'awaiting' || s.paymentStatus === 'rejected');
+  // Paiement à la livraison : rien à régler dans l'application, l'encaissement est enregistré par la plateforme
+  const cashOnDelivery = s.method === 'cash_on_delivery';
+  const canPay = !cashOnDelivery && !paid && !cancelled && (s.paymentStatus === 'awaiting' || s.paymentStatus === 'rejected');
   const instant = payment.instant;
 
   const startInstant = () => {
@@ -80,7 +82,14 @@ export default function OrderPayment() {
 
       <Card style={{ gap: 4 }}>
         <Title style={{ fontSize: 17 }}>{paid ? 'Paiement confirmé' : cancelled ? 'Commande annulée' : 'Commande enregistrée'}</Title>
-        <Body style={{ color: paid ? colors.primary : colors.text }}>{PAYMENT_STATUS_LABELS[s.paymentStatus]}</Body>
+        <Body style={{ color: paid ? colors.primary : colors.text }}>
+          {cashOnDelivery && !paid ? 'Paiement à la livraison' : PAYMENT_STATUS_LABELS[s.paymentStatus]}
+        </Body>
+        {cashOnDelivery && !paid && !cancelled ? (
+          <Body muted style={{ fontSize: 13 }}>
+            Préparez {formatPrice(s.totalAmount)} en espèces pour le livreur : rien à payer maintenant.
+          </Body>
+        ) : null}
         {s.demo ? <Body muted style={{ fontSize: 13 }}>Démonstration : aucun argent réel n’est débité.</Body> : null}
         {s.cancelReason ? <Body style={{ color: colors.danger }}>{s.cancelReason}</Body> : null}
         {canPay && s.expiresAt ? <Body muted style={{ fontSize: 13 }}>À payer avant le {formatDate(s.expiresAt)}.</Body> : null}

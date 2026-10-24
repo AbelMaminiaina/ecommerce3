@@ -52,4 +52,6 @@ export const DELIVERY_LABELS: Record<DeliveryMethod, { label: string; delay: str
   standard: { label: 'Livraison standard', delay: '3 à 5 jours ouvrés' },
   express: { label: 'Livraison express', delay: '1 à 2 jours ouvrés' },
   retrait: { label: 'Retrait sur place', delay: 'Disponible sous 24 h' },
+  province: { label: 'Livraison en province', delay: 'Selon la zone, par transporteur' },
+  relais: { label: 'Point relais', delay: 'Retrait avec votre numéro de commande' },
 };

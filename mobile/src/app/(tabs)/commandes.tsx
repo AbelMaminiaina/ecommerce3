@@ -37,7 +37,22 @@ function OrderCard({ order }: { order: Order }) {
             </View>
           </View>
           {order.paymentStatus && order.status !== 'cancelled' ? (
-            <Text style={styles.meta}>{PAYMENT_STATUS_LABELS[order.paymentStatus]}</Text>
+            <Text style={styles.meta}>
+              {order.paymentMethod === 'cash_on_delivery' && order.paymentStatus !== 'paid'
+                ? 'À payer à la livraison'
+                : PAYMENT_STATUS_LABELS[order.paymentStatus]}
+            </Text>
+          ) : null}
+          {order.pickupPoint ? (
+            <Text style={styles.meta} numberOfLines={2}>
+              Point relais {order.pickupPoint.name}, {order.pickupPoint.address}, {order.pickupPoint.city}
+            </Text>
+          ) : null}
+          {order.trackingNumber ? (
+            <Text style={[styles.meta, { color: colors.text }]}>
+              Suivi : {order.carrier ? `${order.carrier} ` : ''}
+              {order.trackingNumber}
+            </Text>
           ) : null}
         </View>
       </Pressable>

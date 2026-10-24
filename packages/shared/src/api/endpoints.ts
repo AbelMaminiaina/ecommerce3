@@ -15,6 +15,7 @@ import type {
   ProductPage,
   ProductReviews,
   Session,
+  ShippingOptions,
 } from '../types';
 import type { LoginInput, RegisterCustomerInput } from '../schemas';
 
@@ -87,6 +88,13 @@ export const ordersApi = {
 
   mine: async (api: ApiClient) => (await api.request<{ orders: Order[] }>('/checkout/orders/mine')).orders,
 
+};
+
+// ---------- Livraison ----------
+
+export const shippingApi = {
+  /** Villes desservies à domicile, zones de province et points relais actifs */
+  options: (api: ApiClient) => api.request<ShippingOptions>('/shipping/options', { auth: false }),
 };
 
 // ---------- Paiement ----------

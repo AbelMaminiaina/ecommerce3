@@ -142,7 +142,41 @@ export interface MeResponse {
 // ---------- Commandes ----------
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-export type DeliveryMethod = 'standard' | 'express' | 'retrait';
+// standard / express : à domicile (Antananarivo et environs) ; province : par transporteur ; relais : point relais
+export type DeliveryMethod = 'standard' | 'express' | 'retrait' | 'province' | 'relais';
+
+// ---------- Livraison (GET /api/shipping/options) ----------
+
+export interface ShippingZone {
+  id: string;
+  name: string;
+  cities: string[];
+  /** Ariary, par commande (chaque vendeur expédie la sienne) */
+  price: number;
+  delay: string;
+  /** Zone des villes absentes de toutes les autres */
+  isDefault: boolean;
+}
+
+export interface PickupPoint {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  phone: string | null;
+  openingHours: string | null;
+  instructions: string | null;
+  fee: number;
+}
+
+export interface ShippingOptions {
+  /** Villes desservies à domicile (standard / express) */
+  localCities: string[];
+  freeShippingThreshold: number;
+  costs: { standard: number; express: number };
+  zones: ShippingZone[];
+  pickupPoints: PickupPoint[];
+}
 
 export interface OrderAddress {
   street: string;
@@ -168,6 +202,12 @@ export interface Order {
   shippingCost: number;
   total: number;
   deliveryMethod: DeliveryMethod;
+  /** Livraison en province : zone appliquée */
+  shippingZone?: string | null;
+  pickupPoint?: PickupPoint | null;
+  /** Suivi du colis, renseigné à l'expédition */
+  carrier?: string | null;
+  trackingNumber?: string | null;
   paymentMethod?: PaymentMethodId | null;
   paymentStatus?: PaymentStatus;
   cancelReason?: string | null;
@@ -180,6 +220,8 @@ export interface CheckoutInput {
   items: { productId: string; quantity: number }[];
   shippingAddress?: { street: string; city: string; postalCode: string; country?: string };
   deliveryMethod: DeliveryMethod;
+  /** Mode « relais » : point relais choisi */
+  pickupPointId?: string;
   paymentMethod: PaymentMethodId;
   notes?: string;
   /** Commande sans compte */
@@ -205,7 +247,7 @@ export interface CheckoutResponse {
 
 // ---------- Paiement (Mobile Money, carte bancaire, PayPal) ----------
 
-export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal';
+export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal' | 'cash_on_delivery';
 export type PaymentStatus = 'awaiting' | 'submitted' | 'paid' | 'rejected';
 export type PaymentAttemptStatus = 'pending' | 'completed' | 'failed' | 'review';
 
@@ -218,6 +260,8 @@ export interface PaymentMethodInfo {
   automatic: boolean;
   /** Paiement manuel par référence possible (Mobile Money uniquement) */
   manual: boolean;
+  /** Paiement à la livraison : villes desservies et montant maximal d'articles (clients connectés uniquement) */
+  cashOnDelivery?: { cities: string[]; maxAmount: number };
 }
 
 export interface PaymentAttempt {

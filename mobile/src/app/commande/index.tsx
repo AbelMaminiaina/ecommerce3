@@ -2,7 +2,7 @@ import { Stack, router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DELIVERY_LABELS, formatPrice } from '@tsena/shared';
 import { Body, Button, Card, ErrorText, Message, Row, TextField, Title, errorMessage, styles as ui } from '../../components/ui';
-import { DELIVERY_METHODS, useCheckoutForm } from '../../features/checkout/useCheckoutForm';
+import { SPEEDS, useCheckoutForm, type DeliveryMode } from '../../features/checkout/useCheckoutForm';
 import { colors, fonts } from '../../theme';
 
 function Choice({ selected, onPress, title, detail }: { selected: boolean; onPress: () => void; title: string; detail?: string }) {
@@ -26,7 +26,15 @@ export default function Checkout() {
   const form = useCheckoutForm((orderNumber) =>
     router.replace({ pathname: '/commande/[numero]', params: { numero: orderNumber } })
   );
-  const { signedIn, summary, delivery, setDelivery, methods, selectedMethod, setMethod, address, setAddress } = form;
+  const { signedIn, summary, delivery, methods, selectedMethod, setMethod, address, setAddress } = form;
+  const { mode, setMode, speed, setSpeed, isLocalCity, zone, pickupPoints, pickupPointId, setPickupPointId } = form;
+
+  // Point relais proposé seulement s'il en existe un
+  const modes: { id: DeliveryMode; title: string; detail: string }[] = [
+    { id: 'home', title: 'À domicile', detail: 'Antananarivo ou en province' },
+    ...(pickupPoints.length > 0 ? [{ id: 'relais' as const, title: 'Point relais', detail: 'Chez un commerçant partenaire' }] : []),
+    { id: 'retrait', title: DELIVERY_LABELS.retrait.label, detail: 'Gratuit, sans livraison' },
+  ];
   const { guest, setGuest, notes, setNotes, errors, submit } = form;
 
   if (form.empty) {
@@ -69,10 +77,24 @@ export default function Checkout() {
 
         <Card style={{ gap: 8 }}>
           <Title style={styles.section}>Livraison</Title>
-          {DELIVERY_METHODS.map((m) => (
-            <Choice key={m} selected={delivery === m} onPress={() => setDelivery(m)} title={DELIVERY_LABELS[m].label} detail={DELIVERY_LABELS[m].delay} />
+          {modes.map((m) => (
+            <Choice key={m.id} selected={mode === m.id} onPress={() => setMode(m.id)} title={m.title} detail={m.detail} />
           ))}
-          {delivery !== 'retrait' ? (
+          {mode === 'relais' ? (
+            <View style={{ marginTop: 8, gap: 8 }}>
+              {pickupPoints.map((p) => (
+                <Choice
+                  key={p.id}
+                  selected={pickupPointId === p.id}
+                  onPress={() => setPickupPointId(p.id)}
+                  title={`${p.name} · ${p.fee ? formatPrice(p.fee) : 'Gratuit'}`}
+                  detail={[`${p.address}, ${p.city}`, p.openingHours, p.instructions].filter(Boolean).join('\n')}
+                />
+              ))}
+              <ErrorText>{errors.pickupPoint}</ErrorText>
+            </View>
+          ) : null}
+          {mode === 'home' ? (
             <View style={{ marginTop: 8 }}>
               <TextField label="Adresse" value={address.street} onChangeText={(street) => setAddress({ ...address, street })} error={errors.street} autoComplete="street-address" />
               <TextField label="Ville" value={address.city} onChangeText={(city) => setAddress({ ...address, city })} error={errors.city} />
@@ -84,6 +106,20 @@ export default function Checkout() {
                 keyboardType="number-pad"
                 autoComplete="postal-code"
               />
+              {isLocalCity ? (
+                <View style={{ gap: 8 }}>
+                  {SPEEDS.map((m) => (
+                    <Choice key={m} selected={speed === m} onPress={() => setSpeed(m)} title={DELIVERY_LABELS[m].label} detail={DELIVERY_LABELS[m].delay} />
+                  ))}
+                </View>
+              ) : zone ? (
+                <View style={[styles.notice]}>
+                  <Text style={styles.choiceTitle}>Livraison en province · {zone.name}</Text>
+                  <Body muted style={{ fontSize: 13 }}>
+                    {formatPrice(zone.price)} par commande, {zone.delay}. Envoi par transporteur, numéro de suivi par SMS.
+                  </Body>
+                </View>
+              ) : null}
             </View>
           ) : null}
         </Card>
@@ -99,7 +135,13 @@ export default function Checkout() {
               onPress={() => setMethod(m.id)}
               title={m.label}
               detail={
-                !m.manual ? 'Paiement sécurisé en ligne' : m.automatic ? 'Paiement instantané' : `Envoi au ${m.number} puis saisie de la référence`
+                m.id === 'cash_on_delivery'
+                  ? `En espèces à la livraison (${m.cashOnDelivery?.cities.join(', ') ?? 'Antananarivo'}) ou au retrait`
+                  : !m.manual
+                    ? 'Paiement sécurisé en ligne'
+                    : m.automatic
+                      ? 'Paiement instantané'
+                      : `Envoi au ${m.number} puis saisie de la référence`
               }
             />
           ))}
@@ -110,7 +152,10 @@ export default function Checkout() {
 
         <Card style={{ gap: 4 }}>
           <Row label="Sous-total" value={formatPrice(summary.subtotal)} />
-          <Row label="Livraison" value={summary.shipping ? formatPrice(summary.shipping) : 'Offerte'} />
+          <Row
+            label={delivery === 'province' ? `Livraison en province${zone ? ` (${zone.name})` : ''}` : DELIVERY_LABELS[delivery].label}
+            value={summary.shipping ? formatPrice(summary.shipping) : 'Offerte'}
+          />
           <Row label="Total à payer" value={formatPrice(summary.total)} strong />
           {summary.groups.length > 1 ? (
             <Body muted style={{ fontSize: 13 }}>Une commande par vendeur ({summary.groups.length}), un seul paiement.</Body>
@@ -131,4 +176,5 @@ const styles = StyleSheet.create({
   choiceTitle: { fontFamily: fonts.bodyBold, color: colors.text, fontSize: 15 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  notice: { gap: 4, borderRadius: 10, padding: 12, backgroundColor: colors.primarySoft },
 });
