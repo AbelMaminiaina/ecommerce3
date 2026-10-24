@@ -37,6 +37,8 @@ interface OrderData {
     totalToPay: number;
     /** Date limite : passé ce délai, la commande non payée est annulée automatiquement */
     expiresAt?: Date | null;
+    /** Paiement en espèces à la livraison (ou au retrait) */
+    cashOnDelivery?: boolean;
   };
   createdAt: Date;
 }
@@ -223,7 +225,16 @@ function generateCustomerEmailHTML(order: OrderData): string {
       </div>
 
       <!-- Payment instructions -->
-      ${order.payment && !order.payment.number ? `
+      ${order.payment?.cashOnDelivery ? `
+      <div style="background-color: #f0fdf4; border: 2px solid #16a34a; padding: 20px; margin-bottom: 25px; border-radius: 12px; text-align: center;">
+        <span style="font-size: 40px;">💵</span>
+        <h3 style="margin: 10px 0 5px 0; color: #166534;">Paiement à la livraison</h3>
+        <p style="margin: 0; font-size: 28px; font-weight: bold; color: #166534;">${formatPrice(order.payment.totalToPay)}</p>
+        <p style="margin: 15px 0 0 0; color: #166534; font-size: 13px;">
+          Rien à payer maintenant : préparez ce montant en espèces pour le livreur${order.deliveryMethod === 'retrait' ? ' (ou au retrait de votre commande)' : ''}.
+        </p>
+      </div>
+      ` : order.payment && !order.payment.number ? `
       <div style="background-color: #fff7ed; border: 2px solid #f28b00; padding: 20px; margin-bottom: 25px; border-radius: 12px; text-align: center;">
         <span style="font-size: 40px;">💳</span>
         <h3 style="margin: 10px 0 5px 0; color: #9a3412;">Paiement par ${order.payment.methodLabel}</h3>
@@ -382,7 +393,7 @@ function generateAdminNotificationHTML(order: OrderData): string {
       </tr>
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><strong>Paiement:</strong></td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${order.payment ? `${order.payment.methodLabel} — en attente de vérification` : 'Mobile Money'}</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${order.payment ? (order.payment.cashOnDelivery ? 'Paiement à la livraison (espèces)' : `${order.payment.methodLabel} — en attente de vérification`) : 'Mobile Money'}</td>
       </tr>
       <tr>
         <td style="padding: 8px 0;"><strong>Date:</strong></td>
@@ -1193,6 +1204,92 @@ export async function sendLowStockEmail(data: LowStockEmailData): Promise<boolea
     return true;
   } catch (error) {
     console.error('Error sending low stock email:', error);
+    return false;
+  }
+}
+
+interface DisputeOpenedEmailData {
+  orderNumber: string;
+  buyerName: string;
+  sellerName: string | null;
+  total: number;
+  reason: string;
+  /** Destinataire ; absent = l'administrateur de la plateforme */
+  contactEmail?: string;
+  manageUrl: string;
+}
+
+// Paiement garanti : l'acheteur signale un problème. Prévient l'administrateur (qui décide) et le vendeur
+// (dont le reversement est suspendu).
+export async function sendDisputeOpenedEmail(data: DisputeOpenedEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping dispute email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
+    const forSeller = Boolean(data.contactEmail);
+    const html = paymentEmailShell(
+      `Problème signalé sur la commande ${safe.orderNumber}`,
+      'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+      '⚠️',
+      `<p style="margin: 15px 0; color: #666;">${safe.buyerName} a signalé un problème sur la commande <strong>${safe.orderNumber}</strong>${safe.sellerName ? ` (vendeur : ${safe.sellerName})` : ''}, d'un montant de ${formatPrice(data.total)}.</p>
+      <blockquote style="margin: 15px 0; padding: 12px 16px; background: #fef2f2; border-left: 4px solid #dc2626; text-align: left; color: #333;">${safe.reason}</blockquote>
+      <p style="margin: 15px 0; color: #333;">${forSeller ? "Le reversement de cette commande est suspendu jusqu'à la décision de notre équipe, qui pourra vous contacter." : "Le reversement au vendeur est suspendu : décidez du remboursement de l'acheteur ou de la libération de l'argent."}</p>
+      ${linkButton(safe.manageUrl, forSeller ? 'Voir mes commandes' : 'Traiter le litige')}`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail ?? adminEmail(),
+      subject: `⚠️ Litige sur la commande ${data.orderNumber}`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending dispute email:', error);
+    return false;
+  }
+}
+
+interface DisputeResolvedEmailData {
+  orderNumber: string;
+  companyName: string;
+  contactEmail: string;
+  resolution: 'refund' | 'release';
+  total: number;
+  note: string | null;
+}
+
+// Décision sur un litige, envoyée à l'acheteur
+export async function sendDisputeResolvedEmail(data: DisputeResolvedEmailData): Promise<boolean> {
+  try {
+    if (!smtpConfigured()) {
+      console.log('SMTP not configured, skipping dispute resolution email');
+      return false;
+    }
+    const transporter = createTransporter();
+    const safe = escapeHtmlDeep(data);
+    const refund = data.resolution === 'refund';
+    const html = paymentEmailShell(
+      refund ? 'Vous allez être remboursé' : 'Votre signalement a été examiné',
+      refund ? 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+      refund ? '💸' : '🔎',
+      `<p style="margin: 15px 0; color: #666;">Bonjour ${safe.companyName}, ${refund
+        ? `nous vous remboursons ${formatPrice(data.total)} pour la commande <strong>${safe.orderNumber}</strong>, sur le moyen de paiement utilisé (ou en Mobile Money).`
+        : `après examen, la commande <strong>${safe.orderNumber}</strong> est considérée comme conforme et le vendeur va être payé.`}</p>
+      ${safe.note ? `<p style="margin: 15px 0; padding: 12px 16px; background: #f9fafb; border-radius: 8px; color: #333;">${safe.note}</p>` : ''}
+      <p style="margin: 15px 0; color: #666;">Une question ? Répondez simplement à cet e-mail.</p>`
+    );
+    await transporter.sendMail({
+      from: `"${BRAND_NAME}" <${process.env.SMTP_USER}>`,
+      to: data.contactEmail,
+      subject: refund ? `💸 Remboursement de la commande ${data.orderNumber}` : `🔎 Votre signalement sur la commande ${data.orderNumber}`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending dispute resolution email:', error);
     return false;
   }
 }

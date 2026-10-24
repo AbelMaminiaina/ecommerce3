@@ -1,5 +1,6 @@
 import { sendSms, smsEnabled } from '../lib/sms.js';
 import { normalizeMalagasyMobile } from '../lib/phone.js';
+import { buyerProtectionDays } from '../lib/buyerProtection.js';
 
 // SMS de suivi de commande, en plus des e-mails : beaucoup de clients n'ont pas d'e-mail ou ne le lisent pas.
 // Envoyés seulement si les SMS sont configurés (lib/sms.ts), au mobile malgache de l'acheteur, et désactivables
@@ -46,8 +47,13 @@ export function sendOrderPlacedSms(params: {
   paymentNumber?: string;
   paymentLabel: string;
   expiresAt?: Date | null;
+  cashOnDelivery?: boolean;
 }): void {
-  const { orderNumbers, totalAmount, paymentNumber, paymentLabel, expiresAt } = params;
+  const { orderNumbers, totalAmount, paymentNumber, paymentLabel, expiresAt, cashOnDelivery } = params;
+  if (cashOnDelivery) {
+    notify(params.phone, `Tsena Pro : ${orderRef(orderNumbers)} enregistree. ${smsPrice(totalAmount)} a regler en especes a la livraison.`);
+    return;
+  }
   const pay = paymentNumber ? `Payez ${smsPrice(totalAmount)} par ${paymentLabel} au ${paymentNumber}` : `Total ${smsPrice(totalAmount)}`;
   const deadline = expiresAt ? ` avant le ${smsDateTime(expiresAt)}` : '';
   notify(params.phone, `Tsena Pro : ${orderRef(orderNumbers)} enregistree. ${pay}${deadline}.`);
@@ -81,12 +87,31 @@ export function sendOrderStatusSms(params: {
   pickup?: boolean;
 }): void {
   const { orderNumber, status, pickup } = params;
+  const days = buyerProtectionDays();
   const text = {
     shipped: pickup
       ? `Tsena Pro : votre commande ${orderNumber} est prete. Vous pouvez venir la retirer.`
       : `Tsena Pro : votre commande ${orderNumber} a ete expediee. Elle arrive bientot !`,
-    delivered: `Tsena Pro : votre commande ${orderNumber} a ete livree. Merci pour votre confiance !`,
+    // Paiement garanti : l'acheteur peut signaler un problème avant que le vendeur soit payé
+    delivered:
+      days > 0
+        ? `Tsena Pro : commande ${orderNumber} livree. Un probleme ? Signalez-le sous ${days} jours dans votre compte, sinon elle sera confirmee.`
+        : `Tsena Pro : votre commande ${orderNumber} a ete livree. Merci pour votre confiance !`,
     cancelled: `Tsena Pro : votre commande ${orderNumber} a ete annulee. Details dans votre compte ou au service client.`,
   }[status];
   notify(params.phone, text);
+}
+
+// Paiement garanti : décision sur le problème signalé par l'acheteur
+export function sendDisputeResolvedSms(params: {
+  phone: string | null | undefined;
+  orderNumber: string;
+  resolution: 'refund' | 'release';
+}): void {
+  notify(
+    params.phone,
+    params.resolution === 'refund'
+      ? `Tsena Pro : votre signalement sur la commande ${params.orderNumber} est accepte. Vous allez etre rembourse.`
+      : `Tsena Pro : votre signalement sur la commande ${params.orderNumber} a ete examine. Details par e-mail ou au service client.`
+  );
 }

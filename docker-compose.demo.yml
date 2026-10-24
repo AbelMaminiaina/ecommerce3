@@ -124,6 +124,12 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM: ${TWILIO_FROM:-}
       SMS_ORDER_NOTIFICATIONS: ${SMS_ORDER_NOTIFICATIONS:-true}
+      # Paiement garanti : jours laissés à l'acheteur pour signaler un problème avant le reversement au vendeur
+      BUYER_PROTECTION_DAYS: ${BUYER_PROTECTION_DAYS:-3}
+      # Paiement à la livraison (clients connectés, villes desservies, montant plafonné)
+      CASH_ON_DELIVERY: ${CASH_ON_DELIVERY:-false}
+      CASH_ON_DELIVERY_CITIES: ${CASH_ON_DELIVERY_CITIES:-Antananarivo}
+      CASH_ON_DELIVERY_MAX_AMOUNT: ${CASH_ON_DELIVERY_MAX_AMOUNT:-500000}
     volumes:
       # Photos des produits téléversées (à sauvegarder avec la base)
       - uploads_data:/app/uploads

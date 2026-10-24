@@ -162,6 +162,9 @@ router.post('/submit', optionalAuthenticate, paymentLimiter, async (req: Request
       return res.status(404).json({ success: false, error: 'Aucune commande ne correspond à ces informations' });
     }
 
+    if (orders[0].paymentMethod === 'cash_on_delivery') {
+      return res.status(400).json({ success: false, error: 'Cette commande se règle à la livraison : aucune référence à envoyer' });
+    }
     if (!acceptsManualPayment(orders[0].paymentMethod)) {
       return res.status(400).json({
         success: false,

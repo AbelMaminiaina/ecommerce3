@@ -65,6 +65,14 @@ enum PaymentMethod {
   airtel_money
   stripe
   paypal
+  // Paiement en espèces au livreur (ou au retrait) ; l'administrateur l'enregistre quand l'argent lui est remis
+  cash_on_delivery
+}
+
+// Issue d'un litige ouvert par l'acheteur (paiement garanti)
+enum DisputeResolution {
+  refund // Acheteur remboursé : la commande est annulée et n'est jamais reversée au vendeur
+  release // Litige rejeté : l'argent est libéré pour le vendeur
 }
 
 // Cycle de paiement d'une commande : en attente du paiement du client -> référence de transaction
@@ -395,6 +403,17 @@ model Order {
   paymentReminderSentAt DateTime?
   shippingAlertSentAt   DateTime?
 
+  // Paiement garanti : la plateforme garde l'argent jusqu'à la réception. Le vendeur n'est reversé qu'une fois
+  // receivedAt renseigné (confirmation de l'acheteur, ou automatiquement après le délai de protection sans litige).
+  deliveredAt       DateTime?
+  receivedAt        DateTime?
+  receivedBy        String? // buyer | auto | admin
+  disputeOpenedAt   DateTime?
+  disputeReason     String?
+  disputeResolvedAt DateTime?
+  disputeResolution DisputeResolution?
+  disputeNote       String? // Décision de l'administrateur, communiquée à l'acheteur
+
   subtotal     Int // Prix en Ariary
   shippingCost Int // Prix en Ariary
   total        Int // Prix en Ariary
@@ -428,6 +447,7 @@ model Order {
   @@index([paymentStatus])
   @@index([paymentReference])
   @@index([payoutId])
+  @@index([status, receivedAt])
   @@map("orders")
 }
 

@@ -80,7 +80,7 @@ router.get('/admin/summary', authenticate, requirePlatformAdmin, async (_req: Re
         status: { not: 'cancelled' },
         sellerAmount: { not: null },
       },
-      select: { sellerId: true, status: true, payoutId: true, commissionAmount: true, sellerAmount: true },
+      select: { sellerId: true, status: true, receivedAt: true, payoutId: true, commissionAmount: true, sellerAmount: true },
     });
     const payouts = await prisma.payout.findMany({ select: { sellerId: true, amount: true, ordersCount: true } });
 
@@ -105,8 +105,9 @@ router.get('/admin/summary', authenticate, requirePlatformAdmin, async (_req: Re
     const sellers = companies.map((company) => {
       const mine = orders.filter((o) => o.sellerId === company.id);
       const unpaid = mine.filter((o) => !o.payoutId);
-      const eligible = unpaid.filter((o) => o.status === 'delivered');
-      const pending = unpaid.filter((o) => o.status !== 'delivered');
+      // Paiement garanti : reversable une fois la réception confirmée
+      const eligible = unpaid.filter((o) => o.status === 'delivered' && o.receivedAt);
+      const pending = unpaid.filter((o) => !(o.status === 'delivered' && o.receivedAt));
       const myPayouts = payouts.filter((p) => p.sellerId === company.id);
       return {
         id: company.id,
@@ -293,7 +294,8 @@ router.patch('/admin/sellers/:sellerId/commission', authenticate, requirePlatfor
 // VENDEUR
 // ---------------------------------------------------------------------------------------------
 
-type SellerOrderStatus = 'reversed' | 'to_receive' | 'in_progress';
+// in_progress : en préparation, en route, ou livrée mais réception pas encore confirmée ; disputed : litige en cours
+type SellerOrderStatus = 'reversed' | 'to_receive' | 'in_progress' | 'disputed';
 
 // Mes gains : ce qui m'a été versé, ce qui m'est dû (commandes livrées), ce qui est en cours
 router.get('/seller/summary', authenticate, requireApprovedCompany, async (req: Request, res: Response) => {
@@ -318,6 +320,9 @@ router.get('/seller/summary', authenticate, requireApprovedCompany, async (req: 
         commissionAmount: true,
         sellerAmount: true,
         payoutId: true,
+        receivedAt: true,
+        disputeOpenedAt: true,
+        disputeResolvedAt: true,
       },
       orderBy: { paidAt: 'desc' },
       take: 300,
@@ -331,7 +336,13 @@ router.get('/seller/summary', authenticate, requireApprovedCompany, async (req: 
 
     const lines = orders.map((o) => ({
       ...o,
-      state: (o.payoutId ? 'reversed' : o.status === 'delivered' ? 'to_receive' : 'in_progress') as SellerOrderStatus,
+      state: (o.payoutId
+        ? 'reversed'
+        : o.disputeOpenedAt && !o.disputeResolvedAt
+          ? 'disputed'
+          : o.status === 'delivered' && o.receivedAt
+            ? 'to_receive'
+            : 'in_progress') as SellerOrderStatus,
     }));
     const inState = (state: SellerOrderStatus) => lines.filter((l) => l.state === state);
 
@@ -350,7 +361,7 @@ router.get('/seller/summary', authenticate, requireApprovedCompany, async (req: 
         received: sum(payouts.map((p) => p.amount)),
         commissionPaid: sum(lines.map((l) => l.commissionAmount)),
       },
-      orders: lines.map(({ payoutId: _payoutId, ...line }) => line),
+      orders: lines.map(({ payoutId: _payoutId, disputeOpenedAt: _opened, disputeResolvedAt: _resolved, ...line }) => line),
       payouts: payouts.map((p) => ({
         id: p.id,
         amount: p.amount,

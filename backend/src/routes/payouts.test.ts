@@ -80,10 +80,10 @@ describe('accès', () => {
 describe('GET /admin/summary', () => {
   it('sépare ce qui est à reverser, en cours et déjà versé, par vendeur', async () => {
     prismaMock.order.findMany.mockResolvedValue([
-      { sellerId: 's1', status: 'delivered', payoutId: null, commissionAmount: 10_000, sellerAmount: 93_000 }, // à reverser
-      { sellerId: 's1', status: 'shipped', payoutId: null, commissionAmount: 5_000, sellerAmount: 46_000 }, // en cours
-      { sellerId: 's1', status: 'delivered', payoutId: 'p1', commissionAmount: 2_000, sellerAmount: 20_000 }, // déjà versé
-      { sellerId: 's2', status: 'delivered', payoutId: null, commissionAmount: 0, sellerAmount: 50_000 },
+      { sellerId: 's1', status: 'delivered', receivedAt: new Date(), payoutId: null, commissionAmount: 10_000, sellerAmount: 93_000 }, // à reverser
+      { sellerId: 's1', status: 'shipped', receivedAt: null, payoutId: null, commissionAmount: 5_000, sellerAmount: 46_000 }, // en cours
+      { sellerId: 's1', status: 'delivered', receivedAt: new Date(), payoutId: 'p1', commissionAmount: 2_000, sellerAmount: 20_000 }, // déjà versé
+      { sellerId: 's2', status: 'delivered', receivedAt: new Date(), payoutId: null, commissionAmount: 0, sellerAmount: 50_000 },
     ] as any);
     prismaMock.payout.findMany.mockResolvedValue([{ sellerId: 's1', amount: 20_000, ordersCount: 1 }] as any);
     prismaMock.company.findMany.mockResolvedValue([
@@ -162,7 +162,7 @@ describe('POST /admin/sellers/:sellerId/payouts', () => {
     );
   });
 
-  it("ne cherche que des commandes éligibles de CE vendeur (payées, livrées, pas encore reversées)", async () => {
+  it("ne cherche que des commandes éligibles de CE vendeur (payées, livrées, reçues, pas encore reversées)", async () => {
     mockHappyPath();
 
     await request(buildApp()).post('/api/payouts/admin/sellers/s1/payouts').set(adminAuth).send(body);
@@ -171,6 +171,7 @@ describe('POST /admin/sellers/:sellerId/payouts', () => {
       sellerId: 's1',
       paymentStatus: 'paid',
       status: 'delivered',
+      receivedAt: { not: null },
       payoutId: null,
       sellerAmount: { not: null },
     });
@@ -309,7 +310,7 @@ describe('GET /seller/summary', () => {
   it('résume mes gains : à recevoir, en cours, déjà reçu', async () => {
     prismaMock.company.findUnique.mockResolvedValue(approvedSeller({ commissionRate: 8, payoutMethod: 'orange_money', payoutNumber: '032 00 000 00' }));
     prismaMock.order.findMany.mockResolvedValue([
-      { orderNumber: 'ORD-1', status: 'delivered', payoutId: null, subtotal: 100_000, shippingCost: 3_000, total: 103_000, commissionRate: 8, commissionAmount: 8_000, sellerAmount: 95_000, paidAt: new Date() },
+      { orderNumber: 'ORD-1', status: 'delivered', receivedAt: new Date(), payoutId: null, subtotal: 100_000, shippingCost: 3_000, total: 103_000, commissionRate: 8, commissionAmount: 8_000, sellerAmount: 95_000, paidAt: new Date() },
       { orderNumber: 'ORD-2', status: 'processing', payoutId: null, subtotal: 50_000, shippingCost: 0, total: 50_000, commissionRate: 8, commissionAmount: 4_000, sellerAmount: 46_000, paidAt: new Date() },
       { orderNumber: 'ORD-3', status: 'delivered', payoutId: 'p1', subtotal: 20_000, shippingCost: 0, total: 20_000, commissionRate: 8, commissionAmount: 1_600, sellerAmount: 18_400, paidAt: new Date() },
     ] as any);

@@ -90,11 +90,12 @@ describe('splitOrderAmounts', () => {
 });
 
 describe('payoutEligibleWhere', () => {
-  it('targets paid + delivered orders not yet paid out, with a computed commission', () => {
+  it('targets paid, delivered and received orders not yet paid out, with a computed commission', () => {
     expect(payoutEligibleWhere('s1')).toEqual({
       sellerId: 's1',
       paymentStatus: 'paid',
       status: 'delivered',
+      receivedAt: { not: null },
       payoutId: null,
       sellerAmount: { not: null },
     });

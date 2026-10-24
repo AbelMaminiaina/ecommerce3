@@ -36,13 +36,14 @@ export function splitOrderAmounts(order: { subtotal: number; total: number }, ra
   };
 }
 
-// Commandes dont le produit peut être reversé au vendeur : payées, livrées, commission calculée
-// et pas encore incluses dans un reversement.
+// Commandes dont le produit peut être reversé au vendeur : payées, livrées ET reçues (paiement garanti : réception
+// confirmée par l'acheteur ou automatiquement, sans litige en cours), commission calculée, pas encore reversées.
 export function payoutEligibleWhere(sellerId?: string): Prisma.OrderWhereInput {
   return {
     sellerId: sellerId ?? { not: null },
     paymentStatus: 'paid',
     status: 'delivered',
+    receivedAt: { not: null },
     payoutId: null,
     sellerAmount: { not: null },
   };

@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { invalidateProductCache } from '../lib/cache.js';
 import { EXPIRY_CANCEL_REASON, unpaidOrderExpiryHours } from '../lib/orderExpiry.js';
+import { NOT_CASH_ON_DELIVERY } from '../lib/cashOnDelivery.js';
 import { sendOrderCancellationEmail } from './emailService.js';
 import { sendOrderStatusSms } from './smsNotifications.js';
 import type { RecurringJob } from './jobs.js';
@@ -24,6 +25,8 @@ export async function expireUnpaidOrders(now: Date = new Date()): Promise<{ canc
         { paymentStatus: 'awaiting', createdAt: { lt: cutoff } },
         { paymentStatus: 'rejected', updatedAt: { lt: cutoff } },
       ],
+      // Paiement à la livraison : rien n'est attendu avant la livraison
+      AND: [NOT_CASH_ON_DELIVERY],
     },
     include: {
       items: { include: { product: { select: { name: true } } } },

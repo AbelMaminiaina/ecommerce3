@@ -4,6 +4,7 @@ import { paymentReminderAt, paymentReminderHoursBefore, paymentReminderLeadHours
 import { siteUrl } from '../lib/siteUrl.js';
 import { sendPaymentReminderEmail } from './emailService.js';
 import { sendPaymentReminderSms } from './smsNotifications.js';
+import { NOT_CASH_ON_DELIVERY } from '../lib/cashOnDelivery.js';
 import { buyerOf, type BuyerOrder } from './paymentSettlement.js';
 import type { RecurringJob } from './jobs.js';
 
@@ -29,6 +30,7 @@ export async function sendPaymentReminders(now: Date = new Date()): Promise<{ re
         { paymentStatus: 'awaiting', createdAt: { lte: cutoff } },
         { paymentStatus: 'rejected', updatedAt: { lte: cutoff } },
       ],
+      AND: [NOT_CASH_ON_DELIVERY],
     },
     include: {
       company: { select: { name: true, contactEmail: true, contactPhone: true } },

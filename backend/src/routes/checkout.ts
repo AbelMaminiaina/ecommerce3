@@ -24,6 +24,9 @@ import {
 import { rateLimit } from '../lib/rateLimit.js';
 import { PAYMENT_METHOD_IDS, getPaymentMethod } from '../lib/payments.js';
 import { orderExpiresAt } from '../lib/orderExpiry.js';
+import { cashOnDeliveryError } from '../lib/cashOnDelivery.js';
+import { buyerProtectionDays, hasOpenDispute, protectionView } from '../lib/buyerProtection.js';
+import { markOrdersPaid } from '../services/paymentSettlement.js';
 
 const router = Router();
 
@@ -174,6 +177,18 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
         : resolveUnitPrice(product.price, product.priceTiers, item.quantity);
       return { productId: item.productId, quantity: item.quantity, price, product };
     });
+
+    // Paiement à la livraison : client connecté, ville desservie (ou retrait), montant plafonné
+    const cashOnDelivery = paymentMethod.id === 'cash_on_delivery';
+    if (cashOnDelivery) {
+      const codError = cashOnDeliveryError({
+        isGuest,
+        deliveryMethod: validatedData.deliveryMethod,
+        city: validatedData.shippingAddress?.city,
+        itemsTotal: pricedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      });
+      if (codError) return res.status(400).json({ success: false, error: codError });
+    }
 
     // Adresse (liée à l'entreprise ou au particulier) si fournie : une seule pour tout le panier
     let address = null;
@@ -331,7 +346,10 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
     const totalAmount = createdOrders.reduce((sum, o) => sum + o.total, 0);
     // Date limite de paiement (null si l'annulation automatique est désactivée)
     const placedAt = new Date();
-    const expiresAt = orderExpiresAt({ status: 'pending', paymentStatus: 'awaiting', createdAt: placedAt, updatedAt: placedAt });
+    // Paiement à la livraison : aucun délai, la commande n'est jamais annulée faute de paiement
+    const expiresAt = cashOnDelivery
+      ? null
+      : orderExpiresAt({ status: 'pending', paymentStatus: 'awaiting', createdAt: placedAt, updatedAt: placedAt });
     const payment = {
       method: paymentMethod.id,
       label: paymentMethod.label,
@@ -351,6 +369,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
           accountName: paymentMethod.accountName,
           totalToPay: totalAmount,
           expiresAt,
+          cashOnDelivery,
         },
       }).catch((err) => console.error('Failed to send email:', err));
     }
@@ -363,6 +382,7 @@ router.post('/', optionalAuthenticate, limitGuestOrders, canOrderOrGuest, async 
       paymentNumber: paymentMethod.number,
       paymentLabel: paymentMethod.label,
       expiresAt,
+      cashOnDelivery,
     });
 
     const first = createdOrders[0];
@@ -443,6 +463,7 @@ router.get('/orders', authenticate, requirePlatformAdmin, async (_req: Request, 
       notes: order.notes,
       cancelReason: order.cancelReason,
       createdAt: order.createdAt,
+      ...protectionView(order),
       address: order.address
         ? {
             street: order.address.street,
@@ -500,6 +521,7 @@ router.get('/orders/mine', authenticate, requireCanOrder, async (req: Request, r
       paidAt: order.paidAt,
       cancelReason: order.cancelReason,
       createdAt: order.createdAt,
+      ...protectionView(order),
       address: order.address
         ? {
             street: order.address.street,
@@ -561,6 +583,7 @@ router.get('/orders/seller', authenticate, requireApprovedCompany, async (req: R
         commissionAmount: order.commissionAmount,
         sellerAmount: order.sellerAmount,
         reversed: !!order.payoutId,
+        ...protectionView(order),
         notes: order.notes,
         cancelReason: order.cancelReason,
         createdAt: order.createdAt,
@@ -622,9 +645,23 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
       return res.status(400).json({ error: 'Cette commande a déjà été reversée au vendeur : annulation impossible' });
     }
 
-    // La commande n'avance qu'une fois le paiement Mobile Money confirmé
+    // Paiement garanti : un litige se règle depuis la page des litiges, pas en changeant le statut
+    if (hasOpenDispute(existingOrder)) {
+      return res.status(409).json({ error: "Un litige est en cours sur cette commande : il doit d'abord être tranché" });
+    }
+
+    // La commande n'avance qu'une fois le paiement confirmé — sauf un paiement à la livraison, préparé et expédié
+    // avant d'être payé. Le passer en « livrée » enregistre l'encaissement : réservé à l'administrateur, qui
+    // reçoit l'argent du livreur.
     const requiresPayment = ['confirmed', 'processing', 'shipped', 'delivered'].includes(status);
-    if (requiresPayment && existingOrder.paymentStatus !== 'paid') {
+    const cashOnDelivery = existingOrder.paymentMethod === 'cash_on_delivery';
+    const collectsCash = cashOnDelivery && status === 'delivered' && existingOrder.paymentStatus !== 'paid';
+    if (collectsCash && !isAdmin) {
+      return res.status(403).json({
+        error: "Commande payée à la livraison : l'administrateur la passe en « livrée » quand l'argent lui est remis",
+      });
+    }
+    if (requiresPayment && existingOrder.paymentStatus !== 'paid' && !cashOnDelivery) {
       return res.status(400).json({ error: "Le paiement de cette commande n'a pas encore été confirmé" });
     }
 
@@ -646,12 +683,29 @@ router.patch('/orders/:orderId/status', authenticate, async (req: Request, res: 
       }
     }
 
+    // Espèces remises par le livreur : paiement enregistré (commission figée, e-mail et SMS au client)
+    if (collectsCash) {
+      const buyerOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          company: { select: { name: true, contactEmail: true, contactPhone: true } },
+          user: { select: { firstName: true, lastName: true, email: true, phone: true, verifiedPhone: true } },
+        },
+      });
+      await markOrdersPaid({ orders: [existingOrder], buyerOrder: buyerOrder! });
+    }
+
+    const now = new Date();
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
         status,
         ...(status === 'cancelled' ? { cancelReason: reason || null, stockReserved: false } : {}),
         ...(mustReserveStock ? { stockReserved: true } : {}),
+        // Paiement garanti : le délai pour signaler un problème part de la livraison (0 jour = reçue d'office)
+        ...(status === 'delivered' && !existingOrder.deliveredAt
+          ? { deliveredAt: now, ...(buyerProtectionDays() === 0 ? { receivedAt: now, receivedBy: 'auto' } : {}) }
+          : {}),
       },
       include: {
         company: true,
