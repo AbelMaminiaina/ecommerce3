@@ -10,6 +10,7 @@ import { formatDeliveryWindow, formatPrice, formatQuantity, getShippingCost, gro
 import { PageHeader } from '@/components/shop/PageHeader';
 import { createOrder } from '@/lib/api/checkout';
 import { getPaymentMethods, paymentMethodIcon, type PaymentMethodId, type PaymentMethodInfo } from '@/lib/api/payments';
+import { isServedCity } from '@/lib/cashOnDelivery';
 import { filterCheckoutSteps, type CheckoutStepId } from './checkout-steps';
 
 type DeliveryMethod = 'standard' | 'express' | 'retrait';
@@ -93,13 +94,26 @@ export default function CheckoutPage() {
   const belowMoqItems = cart.items.filter((item) => item.quantity < item.moq);
   const isPickup = deliveryMethod === 'retrait';
 
+  // Paiement à la livraison : clients connectés, ville desservie (ou retrait), montant d'articles plafonné.
+  // Le backend refait ces vérifications ; ici elles évitent un aller-retour et expliquent le refus.
+  const visibleMethods = paymentMethods?.filter((m) => !(isGuest && m.id === 'cash_on_delivery')) ?? null;
+  const selectedMethod = visibleMethods?.find((m) => m.id === paymentMethod);
+  const cod = selectedMethod?.cashOnDelivery;
+  const codError = !cod
+    ? null
+    : !isPickup && !isServedCity(addressInfo.city, cod.cities)
+      ? `Le paiement à la livraison est proposé uniquement à ${cod.cities.join(', ')}, ou au retrait sur place.`
+      : subtotal > cod.maxAmount
+        ? `Le paiement à la livraison est limité à ${formatPrice(cod.maxAmount)} d'articles : choisissez un paiement en ligne.`
+        : null;
+
   const steps = useMemo(() => filterCheckoutSteps(ALL_STEPS, hasFreeShippingItem, isGuest), [hasFreeShippingItem, isGuest]);
 
   // Validité de chaque section du formulaire
   const contactValid =
     guestInfo.name.trim().length >= 2 && EMAIL_PATTERN.test(guestInfo.email.trim()) && guestInfo.phone.trim().length >= 6;
   const addressValid = isPickup || !!(addressInfo.street.trim() && addressInfo.city.trim());
-  const paymentValid = belowMoqItems.length === 0 && !!paymentMethod;
+  const paymentValid = belowMoqItems.length === 0 && !!selectedMethod && !codError;
   const stepValid: Record<CheckoutStepId, boolean> = {
     contact: contactValid,
     adresse: addressValid,
@@ -111,7 +125,8 @@ export default function CheckoutPage() {
   const missing = [
     isGuest && !contactValid && 'vos coordonnées (nom, e-mail valide, téléphone)',
     !addressValid && 'l’adresse de livraison (adresse et ville)',
-    !paymentMethod && 'un moyen de paiement',
+    !selectedMethod && 'un moyen de paiement',
+    codError && 'un autre moyen de paiement (paiement à la livraison impossible)',
     belowMoqItems.length > 0 && 'les quantités minimum',
     !acceptTerms && 'l’acceptation des conditions générales de vente',
   ].filter(Boolean) as string[];
@@ -458,7 +473,7 @@ export default function CheckoutPage() {
                       <span className="label-icon"><i className={`bi ${paymentMethodIcon(paymentMethod)}`}></i></span>
                       <div>
                         <h3>Paiement</h3>
-                        <p>Mobile Money, carte bancaire ou PayPal : le paiement est demandé à la commande.</p>
+                        <p>Mobile Money, carte bancaire, PayPal{visibleMethods?.some((m) => m.cashOnDelivery) ? ' ou à la livraison' : ''}. Paiement garanti : le vendeur n&apos;est payé qu&apos;après réception.</p>
                       </div>
                     </div>
                     <div className="section-fields">
@@ -474,14 +489,14 @@ export default function CheckoutPage() {
                           Impossible de charger les moyens de paiement. Actualisez la page.
                         </div>
                       )}
-                      {paymentMethods?.length === 0 && (
+                      {visibleMethods?.length === 0 && (
                         <div className="alert alert-warning" role="alert">
                           Aucun moyen de paiement n&apos;est disponible pour le moment. Merci de réessayer plus tard.
                         </div>
                       )}
-                      {paymentMethods && paymentMethods.length > 0 && (
+                      {visibleMethods && visibleMethods.length > 0 && (
                         <div className="method-tabs">
-                          {paymentMethods.map((method) => (
+                          {visibleMethods.map((method) => (
                             <label key={method.id} className="method-tab">
                               <input
                                 type="radio"
@@ -497,7 +512,13 @@ export default function CheckoutPage() {
                       )}
                       <div className="alt-method-msg">
                         <i className="bi bi-info-circle me-2"></i>
-                        {paymentMethods?.find((m) => m.id === paymentMethod)?.manual === false ? (
+                        {cod ? (
+                          <>
+                            Rien à payer maintenant : vous réglez {formatPrice(total)} en espèces au livreur
+                            {isPickup ? ' (ou au retrait)' : ''}. Disponible à {cod.cities.join(', ')} jusqu&apos;à{' '}
+                            {formatPrice(cod.maxAmount)} d&apos;articles.
+                          </>
+                        ) : selectedMethod?.manual === false ? (
                           <>
                             Après validation, vous êtes redirigé vers la page de paiement sécurisée{' '}
                             {paymentMethod === 'paypal' ? 'de PayPal' : 'de notre prestataire (Stripe)'} pour régler{' '}
@@ -510,6 +531,19 @@ export default function CheckoutPage() {
                           </>
                         )}
                       </div>
+
+                      {codError && (
+                        <div className="alert alert-warning mt-3 mb-0" role="alert">
+                          {codError}
+                        </div>
+                      )}
+
+                      {isGuest && paymentMethods?.some((m) => m.id === 'cash_on_delivery') && (
+                        <p className="small text-muted mt-2 mb-0">
+                          <i className="bi bi-cash-coin me-1"></i>
+                          Le paiement à la livraison est réservé aux clients connectés.
+                        </p>
+                      )}
 
                       {belowMoqItems.length > 0 && (
                         <div className="alert alert-danger mt-3 mb-0" role="alert">
@@ -634,11 +668,12 @@ export default function CheckoutPage() {
                 </div>
                 <div className="secure-info">
                   <div className="secure-badge">
-                    <i className="bi bi-shield-lock"></i>
-                    <span>Paiement sécurisé</span>
+                    <i className="bi bi-shield-check"></i>
+                    <span>Paiement garanti</span>
                   </div>
                   <span className="secure-methods">
-                    {paymentMethods?.length ? paymentMethods.map((m) => m.label).join(' · ') : 'MVola · Orange Money · Airtel Money'}
+                    Le vendeur n&apos;est payé qu&apos;une fois votre commande reçue.{' '}
+                    {visibleMethods?.length ? visibleMethods.map((m) => m.label).join(' · ') : 'MVola · Orange Money · Airtel Money'}
                   </span>
                 </div>
               </div>

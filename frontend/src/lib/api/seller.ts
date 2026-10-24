@@ -1,5 +1,7 @@
 import { fetchAPI } from './config';
 import type { Product } from '@/types';
+import type { PaymentMethodId } from './payments';
+import type { ProtectionState } from './orders';
 
 export interface SellerProductInput {
   name: string;
@@ -30,13 +32,16 @@ export interface SellerOrder {
   total: number;
   deliveryMethod: string;
   // Paiement Mobile Money : la commande ne peut être traitée qu'une fois le paiement confirmé
-  paymentMethod: 'mvola' | 'orange_money' | 'airtel_money' | null;
+  paymentMethod: PaymentMethodId | null;
   paymentStatus: 'awaiting' | 'submitted' | 'paid' | 'rejected';
   // Part du vendeur, calculée à la confirmation du paiement (reversed = déjà versée par la plateforme)
   commissionRate?: number | null;
   commissionAmount?: number | null;
   sellerAmount?: number | null;
   reversed?: boolean;
+  /** Paiement garanti : le vendeur est payé une fois la réception confirmée */
+  protection?: ProtectionState;
+  disputeReason?: string | null;
   notes: string | null;
   cancelReason: string | null;
   createdAt: string;

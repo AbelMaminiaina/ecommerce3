@@ -97,6 +97,10 @@ export default function SellerOrdersPage() {
             const step = nextStep[order.status];
             const closed = order.status === 'delivered' || order.status === 'cancelled';
             const paid = order.paymentStatus === 'paid';
+            // Paiement à la livraison : préparée et expédiée avant d'être payée ; la plateforme la passe en
+            // « livrée » quand le livreur lui remet l'argent
+            const cashOnDelivery = order.paymentMethod === 'cash_on_delivery';
+            const canAdvance = paid || (cashOnDelivery && order.status !== 'shipped');
             return (
               <div key={order.id} className="rounded-xl bg-white p-5 shadow-sm">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -108,8 +112,19 @@ export default function SellerOrdersPage() {
                     <span
                       className={`pill ${paid ? 'tone-success' : 'tone-warning'}`}
                     >
-                      {paid ? 'Payée' : order.paymentStatus === 'submitted' ? 'Paiement en vérification' : 'Paiement en attente'}
+                      {paid
+                        ? 'Payée'
+                        : cashOnDelivery
+                          ? 'Paiement à la livraison'
+                          : order.paymentStatus === 'submitted'
+                            ? 'Paiement en vérification'
+                            : 'Paiement en attente'}
                     </span>
+                    {order.protection === 'disputed' && <span className="pill tone-danger">Litige en cours</span>}
+                    {order.protection === 'received' && <span className="pill tone-success">Reçue par le client</span>}
+                    {order.status === 'delivered' && order.protection === 'protected' && (
+                      <span className="pill tone-info">Réception à confirmer</span>
+                    )}
                     <span className={`pill ${st.className}`}>{st.label}</span>
                   </div>
                 </div>
@@ -130,6 +145,9 @@ export default function SellerOrdersPage() {
                     </p>
                     {order.notes && <p className="mt-2 italic">« {order.notes} »</p>}
                     {order.cancelReason && <p className="mt-2 text-red-600">Annulation : {order.cancelReason}</p>}
+                    {order.protection === 'disputed' && order.disputeReason && (
+                      <p className="mt-2 text-red-600">Problème signalé par le client : « {order.disputeReason} »</p>
+                    )}
                   </div>
                   <ul className="space-y-1 text-sm">
                     {order.items.map((item, i) => (
@@ -167,12 +185,14 @@ export default function SellerOrdersPage() {
 
                 {!closed && (
                   <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-                    {step && !paid && (
+                    {step && !canAdvance && (
                       <p className="w-full text-sm text-warm-500">
-                        À préparer une fois le paiement confirmé par la plateforme.
+                        {cashOnDelivery
+                          ? 'Paiement à la livraison : la plateforme marque la commande livrée à la remise de l’argent par le livreur.'
+                          : 'À préparer une fois le paiement confirmé par la plateforme.'}
                       </p>
                     )}
-                    {step && paid && (
+                    {step && canAdvance && (
                       <button
                         type="button"
                         disabled={busy === order.id}

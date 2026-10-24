@@ -67,6 +67,24 @@ export function PaymentPanel({ orderNumber, email, token, enabled = true }: Paym
     );
   }
 
+  // Paiement à la livraison : rien à faire en ligne, l'encaissement est enregistré par la plateforme
+  if (summary.method === 'cash_on_delivery') {
+    const paid = summary.paymentStatus === 'paid';
+    return (
+      <div className={`alert ${paid ? 'alert-success' : 'alert-info'} mb-0`} role="status">
+        <i className={`bi ${paid ? 'bi-check-circle' : 'bi-cash-coin'} me-2`}></i>
+        {paid ? (
+          <>Paiement de {formatPrice(summary.totalAmount)} reçu à la livraison. Merci !</>
+        ) : (
+          <>
+            <strong>Paiement à la livraison :</strong> préparez {formatPrice(summary.totalAmount)} en espèces pour le
+            livreur. Rien à payer en ligne.
+          </>
+        )}
+      </div>
+    );
+  }
+
   const style = STATUS_STYLE[summary.paymentStatus];
   const referenceValid = REFERENCE_PATTERN.test(reference.trim());
   const canSubmit = referenceValid && payerPhone.trim().length >= 6 && !submitting;

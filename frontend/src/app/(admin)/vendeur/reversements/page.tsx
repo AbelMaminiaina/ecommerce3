@@ -19,6 +19,7 @@ const formatRate = (rate: number) => `${String(rate).replace('.', ',')} %`;
 
 const STATE: Record<SellerOrderState, { label: string; className: string }> = {
   in_progress: { label: 'En cours', className: 'tone-warning' },
+  disputed: { label: 'Litige en cours', className: 'tone-danger' },
   to_receive: { label: 'À recevoir', className: 'tone-info' },
   reversed: { label: 'Versée', className: 'tone-success' },
 };

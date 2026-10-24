@@ -1,4 +1,5 @@
 import type { PaymentMethodId, PaymentStatus } from '@/lib/api/payments';
+import type { OrderProtection } from '@/lib/api/orders';
 
 // Types pour les produits
 export interface Product {
@@ -148,7 +149,8 @@ export interface OrderItemSummary {
   availableFrom?: string | null;
 }
 
-export interface CompanyOrder {
+// Commande vue par l'acheteur ; champs du paiement garanti (lib/api/orders.ts) inclus
+export interface CompanyOrder extends Partial<OrderProtection> {
   id: string;
   orderNumber: string;
   status: OrderStatus;

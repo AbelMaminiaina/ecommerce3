@@ -16,6 +16,8 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 
 ## Paiement
 
+- Paiement garanti : la plateforme garde l'argent jusqu'à la réception. Dans « Mon compte », l'acheteur confirme la réception ou signale un problème (pendant `BUYER_PROTECTION_DAYS` jours après la livraison, 3 par défaut) ; sans signalement, la réception est confirmée automatiquement. Le vendeur n'est reversé qu'une fois la commande reçue ; un litige bloque le reversement jusqu'à la décision de l'administrateur (page « Litiges » : rembourser l'acheteur ou libérer l'argent)
+- Paiement à la livraison (`CASH_ON_DELIVERY=true`) : espèces au livreur ou au retrait, pour les clients connectés, dans les villes desservies (Antananarivo par défaut) et jusqu'à un montant plafonné. Le vendeur prépare et expédie sans attendre ; l'administrateur marque la commande « livrée et encaissée » à la remise de l'argent
 - Paiement par Mobile Money (MVola) : instructions de paiement envoyées par e-mail après commande
 - Gestion du statut de commande (en attente / en préparation) selon la disponibilité du stock au moment de l'achat
 

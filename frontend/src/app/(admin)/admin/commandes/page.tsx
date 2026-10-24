@@ -42,6 +42,9 @@ const paymentMethodLabels: Record<string, string> = {
   mvola: 'MVola',
   orange_money: 'Orange Money',
   airtel_money: 'Airtel Money',
+  stripe: 'Carte bancaire',
+  paypal: 'PayPal',
+  cash_on_delivery: 'Paiement à la livraison',
 };
 
 function isReservation(availableFrom?: string | null): boolean {
@@ -455,7 +458,9 @@ export default function AdminOrdersPage() {
                   )}
                   {selectedOrder.paymentStatus !== 'paid' && (
                     <p className="text-xs text-warm-500 mt-2">
-                      La commande ne peut avancer qu&apos;après confirmation du paiement (page « Paiements »).
+                      {selectedOrder.paymentMethod === 'cash_on_delivery'
+                        ? 'Espèces encaissées par le livreur : « Livrée et encaissée » enregistre le paiement une fois l’argent remis.'
+                        : 'La commande ne peut avancer qu’après confirmation du paiement (page « Paiements »).'}
                     </p>
                   )}
                 </div>
@@ -560,7 +565,9 @@ export default function AdminOrdersPage() {
                         onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
                         disabled={updatingStatus}
                       >
-                        Marquer livrée
+                        {selectedOrder.paymentMethod === 'cash_on_delivery' && selectedOrder.paymentStatus !== 'paid'
+                          ? 'Livrée et encaissée'
+                          : 'Marquer livrée'}
                       </Button>
                     )}
                     <Button

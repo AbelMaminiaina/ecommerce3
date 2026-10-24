@@ -1467,3 +1467,20 @@
 .auth .auth-link-button { border: 0; background: none; padding: 0; font-size: 13px; color: var(--sw-accent); }
 .auth .auth-link-button:disabled { color: color-mix(in srgb, var(--sw-text), transparent 45%); }
 .auth .auth-code-input { font-size: 22px; letter-spacing: .5em; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Mon compte : paiement garanti d'une commande (confirmer la réception / signaler un problème) */
+.account .protection-box { margin-bottom: 16px; padding: 14px 16px; border-radius: 8px; border: 1px solid var(--sw-accent-line); background: var(--sw-accent-soft); }
+.account .protection-box.st-disputed { border-color: color-mix(in srgb, #dc2626, transparent 70%); background: color-mix(in srgb, #dc2626, transparent 94%); }
+.account .protection-box.st-refunded,
+.account .protection-box.st-received { border-color: color-mix(in srgb, #16a34a, transparent 70%); background: color-mix(in srgb, #16a34a, transparent 94%); }
+.account .protection-head { display: flex; gap: 12px; align-items: flex-start; }
+.account .protection-head > i { font-size: 22px; line-height: 1; color: var(--sw-accent); }
+.account .protection-box.st-disputed .protection-head > i { color: #dc2626; }
+.account .protection-box.st-refunded .protection-head > i,
+.account .protection-box.st-received .protection-head > i { color: #16a34a; }
+.account .protection-head strong { color: var(--sw-heading); }
+.account .protection-head p { margin: 2px 0 0; font-size: 13.5px; }
+.account .protection-quote { font-style: italic; }
+.account .protection-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+.account .protection-form { margin-top: 12px; }
+.account .protection-form textarea { font-size: 14px; }

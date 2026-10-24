@@ -17,6 +17,7 @@ import { PAYMENT_STATUS_LABELS } from '@/lib/api/payments';
 import { formatPrice, getProductImage } from '@/lib/utils';
 import { CONTACT, CONTACT_MAILTO } from '@/lib/contact';
 import { PhoneLinkCard, formatMalagasyPhone } from '@/components/shopwise/PhoneLogin';
+import { OrderProtectionBox } from '@/components/shop/OrderProtectionBox';
 
 type Panel = 'dashboard' | 'orders' | 'wishlist' | 'profile';
 const PANELS: Panel[] = ['dashboard', 'orders', 'wishlist', 'profile'];
@@ -59,10 +60,14 @@ function isReservation(availableFrom?: string | null): boolean {
 }
 
 // Une commande, présentée comme dans account.html (en-tête, lignes) + détail dépliable (livraison, totaux, paiement)
-function OrderItem({ order, token }: { order: CompanyOrder; token?: string }) {
+function OrderItem({ order, token, onChange }: { order: CompanyOrder; token?: string; onChange: () => void }) {
   const [open, setOpen] = useState(false);
   const paymentStatus = order.paymentStatus ?? 'awaiting';
-  const needsPayment = order.status !== 'cancelled' && paymentStatus !== 'paid';
+  const cashOnDelivery = order.paymentMethod === 'cash_on_delivery';
+  // Paiement à la livraison : rien à régler avant l'arrivée du livreur
+  const needsPayment = order.status !== 'cancelled' && paymentStatus !== 'paid' && !cashOnDelivery;
+  // Commande livrée : l'acheteur confirme la réception ou signale un problème (paiement garanti)
+  const awaitsBuyer = !!(order.canConfirmReceipt || order.canOpenDispute) && order.status === 'delivered';
 
   return (
     <div className="order-item">
@@ -96,9 +101,14 @@ function OrderItem({ order, token }: { order: CompanyOrder; token?: string }) {
           <i className="bi bi-truck me-1"></i>
           {DELIVERY_LABELS[order.deliveryMethod] ?? order.deliveryMethod}
           {needsPayment && <span className="order-pay-badge ms-2">{PAYMENT_STATUS_LABELS[paymentStatus]}</span>}
+          {cashOnDelivery && paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+            <span className="order-pay-badge ms-2">À payer à la livraison</span>
+          )}
+          {order.protection === 'disputed' && <span className="order-pay-badge ms-2">Problème signalé</span>}
+          {awaitsBuyer && <span className="order-pay-badge ms-2">Réception à confirmer</span>}
         </span>
         <button type="button" className="link-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          {open ? 'Masquer le détail' : needsPayment ? 'Détail et paiement' : 'Voir le détail'}{' '}
+          {open ? 'Masquer le détail' : needsPayment ? 'Détail et paiement' : awaitsBuyer ? 'Confirmer la réception' : 'Voir le détail'}{' '}
           <i className={`bi ${open ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
         </button>
       </div>
@@ -116,7 +126,10 @@ function OrderItem({ order, token }: { order: CompanyOrder; token?: string }) {
             <div><span>Livraison</span><span>{order.shippingCost > 0 ? formatPrice(order.shippingCost) : 'Gratuite'}</span></div>
             <div className="grand"><span>Total</span><span>{formatPrice(order.total)}</span></div>
           </div>
-          {order.status !== 'cancelled' && <PaymentPanel orderNumber={order.orderNumber} token={token} />}
+          <OrderProtectionBox orderId={order.id} protection={order} token={token} onChange={onChange} />
+          {order.status !== 'cancelled' && !(paymentStatus === 'paid' && order.protection && order.protection !== 'none') && (
+            <PaymentPanel orderNumber={order.orderNumber} token={token} />
+          )}
         </div>
       )}
     </div>
@@ -191,6 +204,14 @@ export default function AccountPage() {
       });
   }, [token, canOrder]);
 
+  // Après une confirmation de réception ou un signalement
+  const reloadOrders = useCallback(() => {
+    if (!token) return;
+    getMyOrders(token)
+      .then((res) => setOrders(res.orders ?? []))
+      .catch(() => {});
+  }, [token]);
+
   useEffect(() => {
     getProducts()
       .then((res) => setProducts(res.products))
@@ -242,7 +263,7 @@ export default function AccountPage() {
     orders === null ? (
       <div className="text-center py-4"><span className="spinner-border spinner-border-sm text-primary" aria-label="Chargement"></span></div>
     ) : list.length ? (
-      list.map((order) => <OrderItem key={order.id} order={order} token={token} />)
+      list.map((order) => <OrderItem key={order.id} order={order} token={token} onChange={reloadOrders} />)
     ) : (
       emptyOrders
     );

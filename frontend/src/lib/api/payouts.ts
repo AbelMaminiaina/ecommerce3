@@ -107,7 +107,8 @@ export async function setSellerCommission(
 
 // ---------- Vendeur ----------
 
-export type SellerOrderState = 'reversed' | 'to_receive' | 'in_progress';
+// in_progress : en route, ou livrée sans réception confirmée ; disputed : l'acheteur a signalé un problème
+export type SellerOrderState = 'reversed' | 'to_receive' | 'in_progress' | 'disputed';
 
 export interface SellerEarningLine {
   orderNumber: string;

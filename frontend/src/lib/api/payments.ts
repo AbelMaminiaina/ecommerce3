@@ -4,14 +4,14 @@ import { fetchAPI } from './config';
 // montant au numéro marchand puis saisit la référence de sa transaction, qu'un administrateur vérifie), carte
 // bancaire (Stripe) ou PayPal (paiement en ligne uniquement, sur la page du prestataire).
 
-export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal';
+export type PaymentMethodId = 'mvola' | 'orange_money' | 'airtel_money' | 'stripe' | 'paypal' | 'cash_on_delivery';
 
 /** Moyens de paiement en ligne uniquement (pas de numéro marchand ni de référence à saisir) */
 export const ONLINE_PAYMENT_METHODS: readonly PaymentMethodId[] = ['stripe', 'paypal'];
 
 /** Icône Bootstrap Icons d'un moyen de paiement */
 export const paymentMethodIcon = (id: PaymentMethodId | null | undefined): string =>
-  id === 'stripe' ? 'bi-credit-card' : id === 'paypal' ? 'bi-paypal' : 'bi-phone';
+  id === 'stripe' ? 'bi-credit-card' : id === 'paypal' ? 'bi-paypal' : id === 'cash_on_delivery' ? 'bi-cash-coin' : 'bi-phone';
 export type PaymentStatus = 'awaiting' | 'submitted' | 'paid' | 'rejected';
 
 export interface PaymentMethodInfo {
@@ -24,6 +24,8 @@ export interface PaymentMethodInfo {
   automatic: boolean;
   /** Paiement manuel par référence possible (Mobile Money uniquement) */
   manual: boolean;
+  /** Paiement à la livraison : villes desservies et montant maximal d'articles (clients connectés uniquement) */
+  cashOnDelivery?: { cities: string[]; maxAmount: number };
 }
 
 // Demande de paiement automatique (MVola, Orange Money, Airtel Money, Stripe, PayPal) : le site vérifie le résultat

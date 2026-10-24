@@ -11,7 +11,7 @@ interface CheckoutData {
     country?: string;
   };
   deliveryMethod: DeliveryMethod;
-  // Paiement en ligne obligatoire (Mobile Money) : ni paiement différé ni à la livraison
+  // Mobile Money, carte, PayPal, ou paiement à la livraison (clients connectés, sous conditions)
   paymentMethod: PaymentMethodId;
   notes?: string;
   // Commande sans compte : coordonnées du visiteur (`website` est un champ piège anti-robot)
