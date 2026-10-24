@@ -214,7 +214,8 @@ check "Migrations de la base appliquees" "`$(echo "`$migrations" | grep -q 'Data
 zones="`$(curl -s -m 5 "`$api/shipping/options" | grep -o '"isDefault"' | wc -l)"
 check "Zones de livraison (`$zones)" "`$([ "`$zones" -ge 1 ] && echo 1)"
 phone="`$(curl -s -m 5 "`$api/auth/phone")"
-echo "  INFO  Connexion par SMS : `$phone"
+# Doit venir du backend (nginx), pas de NextAuth : une reponse sans "enabled" signale une route mal aiguillee
+check "Connexion par SMS servie par le backend (`$phone)" "`$(echo "`$phone" | grep -q '"enabled"' && echo 1)"
 methods="`$(curl -s -m 5 "`$api/payments/methods" | grep -o '"id":"[a-z_]*"' | tr '\n' ' ')"
 echo "  INFO  Moyens de paiement : `$methods"
 site="`$(curl -s -m 10 -o /dev/null -w '%{http_code}' "http://127.0.0.1:$DemoPort/")"
