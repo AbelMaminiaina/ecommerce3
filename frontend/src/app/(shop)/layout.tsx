@@ -4,6 +4,7 @@ import { SessionProvider } from '@/components/providers/SessionProvider';
 import { ToastProvider } from '@/components/shop/Toast';
 import { ShopwiseHeader } from '@/components/shopwise/Header';
 import { ShopwiseFooter } from '@/components/shopwise/Footer';
+import { AdvisorLauncher } from '@/components/shopwise/advisor/AdvisorLauncher';
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebsiteJsonLd } from '@/components/seo/JsonLd';
 
 export const metadata = siteMetadata;
@@ -33,6 +34,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
             <ShopwiseHeader />
             <main>{children}</main>
             <ShopwiseFooter />
+            <AdvisorLauncher />
           </ToastProvider>
         </SessionProvider>
       </body>

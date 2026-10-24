@@ -5,6 +5,7 @@ export const CACHE_TTL = {
   PRODUCTS: 300,      // 5 minutes
   PRODUCT: 300,       // 5 minutes
   RELATED: 300,       // 5 minutes
+  ADVISOR: 3600,      // 1 heure
 };
 
 // Cache key prefixes
@@ -12,6 +13,7 @@ export const CACHE_KEYS = {
   PRODUCTS: 'products',
   PRODUCT: 'product',
   RELATED: 'related',
+  ADVISOR: 'advisor',
 };
 
 /**
@@ -80,6 +82,7 @@ export async function invalidateProductCache(): Promise<void> {
   await deleteCacheByPattern(`${CACHE_KEYS.PRODUCTS}:*`);
   await deleteCacheByPattern(`${CACHE_KEYS.PRODUCT}:*`);
   await deleteCacheByPattern(`${CACHE_KEYS.RELATED}:*`);
+  await deleteCacheByPattern(`${CACHE_KEYS.ADVISOR}:*`);
 }
 
 /**

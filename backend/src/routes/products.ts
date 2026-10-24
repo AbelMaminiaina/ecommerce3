@@ -70,7 +70,7 @@ const productSchema = z.object({
 type RatingStats = Map<string, { average: number; count: number }>;
 
 // Note moyenne et nombre d'avis par produit, en une seule requête d'agrégation.
-async function getRatingStats(productIds: string[]): Promise<RatingStats> {
+export async function getRatingStats(productIds: string[]): Promise<RatingStats> {
   const stats: RatingStats = new Map();
   if (productIds.length === 0) return stats;
 
@@ -91,15 +91,15 @@ async function getRatingStats(productIds: string[]): Promise<RatingStats> {
 }
 
 // Produits visibles publiquement : validés par l'admin, dont le vendeur (s'il y en a un) est approuvé
-const PUBLIC_PRODUCT_FILTER = {
+export const PUBLIC_PRODUCT_FILTER = {
   status: 'approved' as const,
   OR: [{ sellerId: null }, { seller: { status: 'approved' as const } }],
 };
 
-const SELLER_SELECT = { select: { id: true, name: true } };
+export const SELLER_SELECT = { select: { id: true, name: true } };
 
 // Transform product for frontend
-function transformProduct(p: any, ratings?: RatingStats) {
+export function transformProduct(p: any, ratings?: RatingStats) {
   const stats = ratings?.get(p.id);
   return {
     ...p,

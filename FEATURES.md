@@ -7,6 +7,7 @@ Ce document recense les fonctionnalités du site, organisées par domaine.
 - Catalogue de produits (poulet, porc, poisson, akanga, caille, œufs frais, œufs fécondés, produits transformés, accessoires)
 - Filtrage par catégorie et recherche, avec tri automatique (produits en stock affichés en premier)
 - Fiche produit avec galerie d'images, description, caractéristiques et produits similaires
+- Conseiller IA : le client décrit son besoin, l'IA (Mistral, puis Gemini en secours) propose jusqu'à 4 produits du catalogue ; sans clé ou en cas de panne, recherche par mots-clés. Section sur l'accueil et le catalogue, bouton flottant « Conseil » ailleurs ; 10 questions par heure et par visiteur, réponses en cache 1 h
 - Panier persistant côté client (Zustand + localStorage), avec ajout/suppression/modification de quantité
 - Commande sans compte (guest checkout)
 - Frais de livraison calculés automatiquement (standard, express, retrait sur place) avec livraison gratuite au-delà de 200 000 Ar

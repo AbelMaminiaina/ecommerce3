@@ -59,6 +59,7 @@ secrets sont conservés**.
 .\scripts\deploy-demo.ps1 -Server IP_DU_VPS -Action logs     # derniers logs
 .\scripts\deploy-demo.ps1 -Server IP_DU_VPS -Action stop     # arrêter (données conservées)
 .\scripts\deploy-demo.ps1 -Server IP_DU_VPS -Action seed     # ⚠️ EFFACE tout et recharge la démo
+.\scripts\set-ai-keys.ps1 -Server IP_DU_VPS                  # clés du conseiller IA (Mistral, Gemini) dans .env.demo
 ```
 
 ## 4. Déploiement manuel (sur le serveur, sans le script)

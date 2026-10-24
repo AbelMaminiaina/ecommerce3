@@ -93,7 +93,7 @@ describe('deleteCacheByPattern', () => {
 });
 
 describe('invalidateProductCache', () => {
-  it('clears products, product and related caches', async () => {
+  it('clears products, product, related and advisor caches', async () => {
     redisMock.keys.mockResolvedValue([]);
 
     await invalidateProductCache();
@@ -101,6 +101,7 @@ describe('invalidateProductCache', () => {
     expect(redisMock.keys).toHaveBeenCalledWith(`${CACHE_KEYS.PRODUCTS}:*`);
     expect(redisMock.keys).toHaveBeenCalledWith(`${CACHE_KEYS.PRODUCT}:*`);
     expect(redisMock.keys).toHaveBeenCalledWith(`${CACHE_KEYS.RELATED}:*`);
+    expect(redisMock.keys).toHaveBeenCalledWith(`${CACHE_KEYS.ADVISOR}:*`);
   });
 });
 

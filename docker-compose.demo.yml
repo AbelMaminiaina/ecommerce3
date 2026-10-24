@@ -108,6 +108,11 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-savatry.milamina@gmail.com}
+      # Conseiller IA (optionnel) : Mistral, puis Gemini en secours ; sans clé, recherche par mots-clés
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-latest}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
     volumes:
       # Photos des produits téléversées (à sauvegarder avec la base)
       - uploads_data:/app/uploads

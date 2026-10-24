@@ -9,6 +9,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { formatPrice, getBadgeLabel, getProductImage, isUpcoming } from '@/lib/utils';
 import { PageHeader } from '@/components/shop/PageHeader';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { AdvisorSection } from '@/components/shopwise/advisor/AdvisorSection';
 
 interface ProductsClientProps {
   initialProducts: Product[];
@@ -469,6 +470,8 @@ function ProductsContent({ initialProducts }: ProductsClientProps) {
           </div>
         </div>
       </section>
+
+      <AdvisorSection className="sw-section sw-advisor-section border-top" />
     </>
   );
 }
