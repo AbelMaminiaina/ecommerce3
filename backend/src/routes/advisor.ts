@@ -14,8 +14,8 @@ const advisorSchema = z.object({
 
 // Limites, pour ne pas épuiser le quota de Mistral / Gemini. Elles ne comptent QUE les questions réellement
 // envoyées à l'IA : une réponse déjà en cache, ou la recherche par mots-clés (aucune clé configurée), ne coûtent rien.
-//  - par visiteur (compte connecté, sinon identifiant d'appareil X-Visitor-Id + adresse IP) : ADVISOR_MAX_PER_HOUR (20) ;
-//  - par adresse IP, large : ADVISOR_MAX_PER_IP_HOUR (200). À Madagascar, beaucoup d'abonnés mobiles sortent par la
+//  - par visiteur (compte connecté, sinon identifiant d'appareil X-Visitor-Id + adresse IP) : ADVISOR_MAX_PER_HOUR (60) ;
+//  - par adresse IP, large : ADVISOR_MAX_PER_IP_HOUR (1000). À Madagascar, beaucoup d'abonnés mobiles sortent par la
 //    même adresse IP de leur opérateur : une limite stricte par adresse bloquerait des clients qui n'ont rien fait.
 // En mémoire : suffisant pour une seule instance du backend.
 const HOUR_MS = 60 * 60 * 1000;
@@ -87,8 +87,8 @@ router.post('/', optionalAuthenticate, async (req: Request, res: Response) => {
         const visitor = String(req.headers['x-visitor-id'] ?? '');
         const visitorKey = req.user ? `user:${req.user.userId}` : `visitor:${ip}|${VISITOR_ID.test(visitor) ? visitor : '-'}`;
         const retryAfter = advisorRetryAfter([
-          { key: visitorKey, max: intSetting('ADVISOR_MAX_PER_HOUR', 20) },
-          { key: `ip:${ip}`, max: intSetting('ADVISOR_MAX_PER_IP_HOUR', 200) },
+          { key: visitorKey, max: intSetting('ADVISOR_MAX_PER_HOUR', 60) },
+          { key: `ip:${ip}`, max: intSetting('ADVISOR_MAX_PER_IP_HOUR', 1000) },
         ]);
         if (retryAfter > 0) {
           res.setHeader('Retry-After', String(retryAfter));

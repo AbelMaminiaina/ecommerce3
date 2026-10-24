@@ -5,7 +5,7 @@ export const CACHE_TTL = {
   PRODUCTS: 300,      // 5 minutes
   PRODUCT: 300,       // 5 minutes
   RELATED: 300,       // 5 minutes
-  ADVISOR: 3600,      // 1 heure
+  ADVISOR: 86_400,    // 24 heures (vidé à chaque modification de produit ; prix et stock relus à chaque réponse)
 };
 
 // Cache key prefixes

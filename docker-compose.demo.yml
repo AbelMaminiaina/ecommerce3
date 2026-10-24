@@ -114,8 +114,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       # Questions envoyées à l'IA par heure : par compte ou appareil, et par adresse IP
-      ADVISOR_MAX_PER_HOUR: ${ADVISOR_MAX_PER_HOUR:-20}
-      ADVISOR_MAX_PER_IP_HOUR: ${ADVISOR_MAX_PER_IP_HOUR:-200}
+      ADVISOR_MAX_PER_HOUR: ${ADVISOR_MAX_PER_HOUR:-60}
+      ADVISOR_MAX_PER_IP_HOUR: ${ADVISOR_MAX_PER_IP_HOUR:-1000}
+      ADVISOR_CATALOG_SIZE: ${ADVISOR_CATALOG_SIZE:-25}
       # SMS (codes de connexion par téléphone + suivi des commandes) : orange, twilio, ou demo (code affiché à l'écran,
       # démonstration uniquement). Vide = pas de SMS ni de connexion par téléphone.
       SMS_PROVIDER: ${SMS_PROVIDER:-}
